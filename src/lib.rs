@@ -5,6 +5,7 @@ mod demo;
 mod dev_tools;
 mod screens;
 mod theme;
+mod world;
 
 use bevy::{
     asset::AssetMetaCheck,
@@ -19,7 +20,13 @@ impl Plugin for AppPlugin {
         // Order new `AppSet` variants by adding them here:
         app.configure_sets(
             Update,
-            (AppSet::TickTimers, AppSet::RecordInput, AppSet::Update).chain(),
+            (
+                AppSet::TickTimers,
+                AppSet::RecordInput,
+                AppSet::PreUpdate,
+                AppSet::Update,
+            )
+                .chain(),
         );
 
         // Spawn the main camera.
@@ -59,6 +66,7 @@ impl Plugin for AppPlugin {
             #[cfg(feature = "dev")]
             dev_tools::plugin,
             screens::plugin,
+            world::plugin,
             theme::plugin,
         ));
     }
@@ -73,6 +81,7 @@ enum AppSet {
     TickTimers,
     /// Record player input.
     RecordInput,
+    PreUpdate,
     /// Do everything else (consider splitting this into further variants).
     Update,
 }
