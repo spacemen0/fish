@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{asset_tracking::LoadResource, screens::Screen};
+use crate::{AppSet, asset_tracking::LoadResource, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<TileMap>();
@@ -15,14 +15,17 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         OnEnter(Screen::Gameplay),
-        spawn_map.run_if(resource_exists::<TileAssets>),
+        spawn_map
+            .run_if(resource_exists::<TileAssets>)
+            .in_set(AppSet::PreUpdate),
     );
 }
 
 // CONSTANTS
 pub const TILE_SIZE: i32 = 32;
+pub const TILE_SCALE: f32 = 2.0; // Scale for rendering
 pub const MAP_WIDTH: i32 = 64; // For a larger farm
-pub const MAP_HEIGHT: i32 = 64;
+pub const MAP_HEIGHT: i32 = 48;
 
 /// Manages the entire map consisting of tiles
 #[derive(Component, Reflect, Default)]
@@ -54,7 +57,7 @@ impl FromWorld for TileAssets {
                 },
             ),
             texture_atlas: world.resource_mut::<Assets<TextureAtlasLayout>>().add(
-                TextureAtlasLayout::from_grid(UVec2::splat(32), 16, 16, None, None),
+                TextureAtlasLayout::from_grid(UVec2::splat(TILE_SIZE as u32), 16, 16, None, None),
             ),
         }
     }
@@ -164,7 +167,6 @@ pub fn spawn_map(mut commands: Commands, tile_asset: Res<TileAssets>) {
             tiles.insert(TilePosition { x, y }, tile_type);
         }
     }
-    print!("Tiles: {:?}", tiles);
     // Spawn all the tiles
     for (pos, tile_type) in &tiles {
         spawn_tile(&mut commands, map_entity, *pos, &tile_asset, *tile_type);
@@ -179,16 +181,15 @@ fn spawn_tile(
     tile_asset: &TileAssets,
     tile_type: TileType,
 ) {
-    let tile_index;
-    match tile_type {
-        TileType::Grass => tile_index = 0,
-        TileType::Dirt => tile_index = 1,
-        TileType::Tilled => tile_index = 2,
-        TileType::Water => tile_index = 3,
-        TileType::Sand => tile_index = 4,
-        TileType::Stone => tile_index = 5,
-        TileType::Path => tile_index = 6,
-    }
+    let tile_index = match tile_type {
+        TileType::Grass => 0,
+        TileType::Dirt => 1,
+        TileType::Tilled => 2,
+        TileType::Water => 3,
+        TileType::Sand => 4,
+        TileType::Stone => 5,
+        TileType::Path => 6,
+    };
 
     let tile_entity = commands
         .spawn((
@@ -207,7 +208,7 @@ fn spawn_tile(
                 ..default()
             },
             Transform::from_translation(tile_to_world(position).extend(0.0))
-                .with_scale(Vec2::splat(2.0).extend(1.0)),
+                .with_scale(Vec3::new(TILE_SCALE, TILE_SCALE, 1.0)),
         ))
         .id();
 
@@ -224,9 +225,8 @@ fn spawn_tile(
 // }
 /// Convert tile coordinates to world position (center of tile)
 pub fn tile_to_world(tile_pos: TilePosition) -> Vec2 {
-    println!("Tile pos: {:?}", tile_pos);
     Vec2::new(
-        ((tile_pos.x * TILE_SIZE) + (TILE_SIZE / 2)) as f32,
-        ((tile_pos.y * TILE_SIZE) + (TILE_SIZE / 2)) as f32,
+        (tile_pos.x * TILE_SIZE) as f32 * TILE_SCALE,
+        (tile_pos.y * TILE_SIZE) as f32 * TILE_SCALE,
     )
 }

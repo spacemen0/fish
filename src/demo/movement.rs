@@ -13,18 +13,28 @@
 //! purposes. If you want to move the player in a smoother way,
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
+use bevy::prelude::*;
 
 use crate::AppSet;
+use crate::demo::player::Player;
+use crate::screens::Screen;
+use crate::world::tilemap::{MAP_HEIGHT, MAP_WIDTH, TILE_SCALE, TILE_SIZE};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
-    app.register_type::<ScreenWrap>();
+    app.register_type::<WithinBoundrie>();
 
     app.add_systems(
         Update,
-        (apply_movement, apply_screen_wrap)
+        (
+            apply_movement,
+            apply_screen_wrap,
+            camera_follow_player,
+            camera_zoom,
+        )
             .chain()
+            .run_if(in_state(Screen::Gameplay))
             .in_set(AppSet::Update),
     );
 }
@@ -65,17 +75,64 @@ fn apply_movement(
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub struct ScreenWrap;
+pub struct WithinBoundrie;
 
-fn apply_screen_wrap(
-    window: Single<&Window, With<PrimaryWindow>>,
-    mut wrap_query: Query<&mut Transform, With<ScreenWrap>>,
-) {
-    let size = window.size();
-    let half_size = size / 2.0;
+fn apply_screen_wrap(mut wrap_query: Query<&mut Transform, With<WithinBoundrie>>) {
+    let width = MAP_WIDTH as f32 * TILE_SIZE as f32 * TILE_SCALE;
+    let half_width = width / 2.0;
+    let height = MAP_HEIGHT as f32 * TILE_SIZE as f32 * TILE_SCALE;
+    let half_height = height / 2.0;
     for mut transform in &mut wrap_query {
         let position = transform.translation.xy();
-        let wrapped = (position + half_size).rem_euclid(size) - half_size;
-        transform.translation = wrapped.extend(transform.translation.z);
+        let clamped_x = position.x.clamp(-half_width, half_width);
+        let clamped_y = position.y.clamp(-half_height, half_height);
+        transform.translation = Vec3::new(clamped_x, clamped_y, transform.translation.z);
+    }
+}
+
+fn camera_follow_player(
+    time: Res<Time>,
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_translation: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+) {
+    let player_transform = player_query.single().unwrap();
+
+    let mut camera_transform = camera_translation.single_mut().unwrap();
+    let player_pos = player_transform.translation.xy();
+    let target_position = player_pos.extend(camera_transform.translation.z);
+
+    let smoothness: f32 = 0.75;
+
+    let t = 1.0 - smoothness.powf(time.delta_secs() * 10.0);
+
+    camera_transform.translation = camera_transform.translation.lerp(target_position, t);
+}
+
+fn camera_zoom(
+    mut scroll_evr: EventReader<MouseWheel>,
+    mut query: Query<&mut Projection, With<Camera2d>>,
+) {
+    // Calculate the total scroll amount from all events
+    let scroll_amount = scroll_evr.read().fold(0.0, |acc, ev| {
+        acc + match ev.unit {
+            MouseScrollUnit::Line => ev.y,
+            MouseScrollUnit::Pixel => ev.y / 100.0,
+        }
+    });
+
+    if scroll_amount == 0.0 {
+        return;
+    }
+
+    // Apply zoom to all 2D cameras
+    let mut projection = query.single_mut().unwrap();
+    // Adjust zoom speed/sensitivity
+    let zoom_speed = 0.1;
+
+    // Adjust scale - smaller values zoom in
+    if let Projection::Orthographic(ref mut ortho) = *projection {
+        ortho.scale *= 1.0 - scroll_amount * zoom_speed;
+        // Clamp to reasonable limits
+        ortho.scale = ortho.scale.clamp(0.1, 3.0);
     }
 }

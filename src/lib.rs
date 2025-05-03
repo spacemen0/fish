@@ -28,7 +28,6 @@ impl Plugin for AppPlugin {
             )
                 .chain(),
         );
-
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
 
@@ -87,5 +86,5 @@ enum AppSet {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d));
+    commands.spawn((Name::new("Camera"), Camera2d, Msaa::Off));
 }

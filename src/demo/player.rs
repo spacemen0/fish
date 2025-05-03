@@ -10,7 +10,7 @@ use crate::{
     asset_tracking::LoadResource,
     demo::{
         animation::PlayerAnimation,
-        movement::{MovementController, ScreenWrap},
+        movement::{MovementController, WithinBoundrie},
     },
 };
 
@@ -56,14 +56,14 @@ pub fn player(
             max_speed,
             ..default()
         },
-        ScreenWrap,
+        WithinBoundrie,
         player_animation,
     )
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-struct Player;
+pub(crate) struct Player;
 
 fn record_player_directional_input(
     input: Res<ButtonInput<KeyCode>>,
