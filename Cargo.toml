@@ -20,7 +20,9 @@ tracing = { version = "0.1", features = [
 fastrand = "2.3.0"
 bevy_egui = "0.34.1"
 bevy-inspector-egui = "0.31.0"
-bevy_ecs_tilemap = "0.15.0"
+bevy_ecs_tilemap = { git = "https://github.com/StarArawn/bevy_ecs_tilemap" }
+thiserror = "2.0.12"
+tiled = "0.14.0"
 
 [features]
 default = [
