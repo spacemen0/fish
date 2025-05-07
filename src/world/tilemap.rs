@@ -12,7 +12,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(Screen::Gameplay),
         spawn_tile_map.in_set(AppSet::PreUpdate),
-    );
+    )
+    .add_systems(Update, print_properties.in_set(AppSet::Update));
 }
 
 // CONSTANTS
@@ -88,12 +89,19 @@ pub const MAP_HEIGHT: i32 = 20;
 // }
 
 fn spawn_tile_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let map_handle = super::tiled::TiledMapHandle(asset_server.load("tilemaps/farm.tmx"));
+    let map_handle = super::tiledhelper::TiledMapHandle(asset_server.load("tilemaps/farm.tmx"));
 
-    commands.spawn(super::tiled::TiledMapBundle {
+    commands.spawn(super::tiledhelper::TiledMapBundle {
         tiled_map: map_handle,
         ..Default::default()
     });
+}
+
+fn print_properties(query: Query<(Entity, &super::tiledhelper::TileProperties)>) {
+    for (entity, map) in query.iter() {
+        println!("Entity: {:?}", entity);
+        println!("Map Properties: {:?}", map.properties);
+    }
 }
 // Spawn the initial map
 // pub fn spawn_map(mut commands: Commands, tile_asset: Res<TileAssets>) {

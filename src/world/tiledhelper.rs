@@ -16,6 +16,7 @@ use std::io::{Cursor, ErrorKind};
 use std::path::Path;
 use std::sync::Arc;
 
+use bevy::ecs::name::Name;
 use bevy::log::{info, warn};
 use bevy::math::Vec2;
 use bevy::{
@@ -43,6 +44,12 @@ impl Plugin for TiledPlugin {
     }
 }
 
+// Define a component to store tile properties
+#[derive(Component, Default, Debug, Clone)]
+pub struct TileProperties {
+    pub properties: HashMap<String, tiled::PropertyValue>,
+}
+
 #[derive(TypePath, Asset)]
 pub struct TiledMap {
     pub map: tiled::Map,
@@ -50,7 +57,6 @@ pub struct TiledMap {
     pub tilemap_textures: HashMap<usize, TilemapTexture>,
 
     // The offset into the tileset_images for each tile id within each tileset.
-    
     pub tile_image_offsets: HashMap<(usize, tiled::TileId), u32>,
 }
 
@@ -126,12 +132,12 @@ impl AssetLoader for TiledLoader {
         })?;
 
         let mut tilemap_textures = HashMap::default();
-        
+
         let mut tile_image_offsets = HashMap::default();
 
         for (tileset_index, tileset) in map.tilesets().iter().enumerate() {
             let tilemap_texture = match &tileset.image {
-                None => {             
+                None => {
                     {
                         let mut tile_images: Vec<Handle<Image>> = Vec::new();
                         for (tile_id, tile) in tileset.tiles() {
@@ -178,7 +184,7 @@ impl AssetLoader for TiledLoader {
         let asset_map = TiledMap {
             map,
             tilemap_textures,
-            
+
             tile_image_offsets,
         };
 
@@ -341,29 +347,48 @@ pub fn process_loaded_maps(
                                         }
                                     };
 
+                                // Get tile properties from the tileset
+                                let tile_properties = if let Some(tileset) =
+                                    tiled_map.map.tilesets().get(tileset_index)
+                                {
+                                    let props =
+                                        if let Some(tile_def) = tileset.get_tile(layer_tile.id()) {
+                                            // Convert std::collections::HashMap to bevy::utils::HashMap
+                                            HashMap::from_iter(tile_def.properties.clone())
+                                        } else {
+                                            HashMap::default()
+                                        };
+                                    TileProperties { properties: props }
+                                } else {
+                                    TileProperties::default()
+                                };
+
                                 let texture_index = match tilemap_texture {
                                     TilemapTexture::Single(_) => layer_tile.id(),
-                                    
                                     TilemapTexture::Vector(_) =>
                                         *tiled_map.tile_image_offsets.get(&(tileset_index, layer_tile.id()))
                                         .expect("The offset into to image vector should have been saved during the initial load."),
-                                    
                                     _ => unreachable!()
                                 };
 
                                 let tile_pos = TilePos { x, y };
                                 let tile_entity = commands
-                                    .spawn(TileBundle {
-                                        position: tile_pos,
-                                        tilemap_id: TilemapId(layer_entity),
-                                        texture_index: TileTextureIndex(texture_index),
-                                        flip: TileFlip {
-                                            x: layer_tile_data.flip_h,
-                                            y: layer_tile_data.flip_v,
-                                            d: layer_tile_data.flip_d,
+                                    .spawn((
+                                        TileBundle {
+                                            position: tile_pos,
+                                            tilemap_id: TilemapId(layer_entity),
+                                            texture_index: TileTextureIndex(texture_index),
+                                            flip: TileFlip {
+                                                x: layer_tile_data.flip_h,
+                                                y: layer_tile_data.flip_v,
+                                                d: layer_tile_data.flip_d,
+                                            },
+                                            ..Default::default()
                                         },
-                                        ..Default::default()
-                                    })
+                                        // Add the tile properties component
+                                        tile_properties,
+                                        Name::new(format!("Tile ({}, {})", tile_pos.x, tile_pos.y)),
+                                    ))
                                     .id();
                                 tile_storage.set(&tile_pos, tile_entity);
                             }
