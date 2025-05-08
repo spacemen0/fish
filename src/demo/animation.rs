@@ -109,7 +109,11 @@ fn trigger_step_sound_effect(
             && (animation.frame == 2 || animation.frame == 5)
         {
             let rng = &mut rand::thread_rng();
-            let random_step = player_assets.steps.choose(rng).unwrap().clone();
+            let random_step = player_assets
+                .steps
+                .choose(rng)
+                .expect("Player assets should exist!")
+                .clone();
             commands.spawn(sound_effect(random_step));
             animation.set_state_changed(false);
         }

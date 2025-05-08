@@ -18,8 +18,8 @@ pub(super) fn plugin(app: &mut App) {
 // CONSTANTS
 pub const TILE_SIZE: i32 = 16;
 pub const TILE_SCALE: f32 = 3.0; // Scale for rendering
-pub const MAP_WIDTH: i32 = 30; // For a larger farm
-pub const MAP_HEIGHT: i32 = 20;
+pub const MAP_WIDTH: i32 = 54; // For a larger farm
+pub const MAP_HEIGHT: i32 = 36;
 
 // /// Manages the entire map consisting of tiles
 // #[derive(Component, Reflect, Default)]

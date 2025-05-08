@@ -172,11 +172,11 @@ impl AssetLoader for TiledLoader {
                 Some(img) => {
                     // The load context path is the TMX file itself. If the file is at the root of the
                     // assets/ directory structure then the tmx_dir will be empty, which is fine.
-                    let tmx_dir = load_context
-                        .path()
-                        .parent()
-                        .expect("The asset load context was empty.");
-                    let tile_path = tmx_dir.join(&img.source);
+                    // let tmx_dir = load_context
+                    //     .path()
+                    //     .parent()
+                    //     .expect("The asset load context was empty.");
+                    let tile_path = img.source.clone();
                     let asset_path = AssetPath::from(tile_path);
                     let texture: Handle<Image> = load_context.load(asset_path.clone());
 
@@ -391,24 +391,36 @@ pub fn process_loaded_maps(
                                             ..Default::default()
                                         },
                                         // Add the tile properties component
-                                        Name::new(format!("Tile ({}, {})", tile_pos.x, tile_pos.y)),
+                                        Name::new(format!(
+                                            "Tile ({}, {}, {})",
+                                            tile_pos.x, tile_pos.y, layer_index
+                                        )),
                                     ))
                                     .id();
                                 if tile_properties.get("type").is_none() {
                                     warn!("Tile type are empty for tile id {}", layer_tile.id());
                                 } else {
-                                    let tile_type = match tile_properties.get("type").unwrap() {
-                                        tiled::PropertyValue::StringValue(s) => match s.as_str() {
-                                            "Grass" => TileType::Grass,
-                                            "Dirt" => TileType::Dirt,
-                                            "Water" => TileType::Water,
-                                            "Sand" => TileType::Sand,
-                                            "Rock" => TileType::Rock,
-                                            _ => TileType::Grass,
-                                        },
-                                        _ => panic!("Tile type is not a valid string"),
-                                    };
-                                    commands.entity(tile_entity).insert(tile_type);
+                                    if let Some(tile_type_value) = tile_properties.get("type") {
+                                        let tile_type = match tile_type_value {
+                                            tiled::PropertyValue::StringValue(s) => {
+                                                match s.as_str() {
+                                                    "Grass" => TileType::Grass,
+                                                    "Dirt" => TileType::Dirt,
+                                                    "Water" => TileType::Water,
+                                                    "Sand" => TileType::Sand,
+                                                    "Rock" => TileType::Rock,
+                                                    _ => TileType::Grass,
+                                                }
+                                            }
+                                            _ => {
+                                                panic!(
+                                                    "Tile type is not a valid string for tile id {}",
+                                                    layer_tile.id()
+                                                );
+                                            }
+                                        };
+                                        commands.entity(tile_entity).insert(tile_type);
+                                    }
                                 }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }

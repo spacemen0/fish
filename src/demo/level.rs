@@ -18,6 +18,6 @@ pub fn spawn_level(
         Transform::default(),
         Visibility::default(),
         StateScoped(Screen::Gameplay),
-        children![player(400.0, &player_assets, &mut texture_atlas_layouts)],
+        children![player(800.0, &player_assets, &mut texture_atlas_layouts)],
     ));
 }

@@ -13,7 +13,9 @@ use crate::{
         movement::{MovementController, WithinBoundrie},
     },
 };
-
+pub const PLAYER_SIZE: f32 = 16.0;
+pub const PLAYER_SCALE: f32 = 3.0; // Scale for rendering
+pub const PLAYER_Z: f32 = 2.0; // Z position for rendering
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
 
@@ -35,7 +37,7 @@ pub fn player(
 ) -> impl Bundle {
     // A texture atlas is a way to split a single image into a grid of related images.
     // You can learn more in this example: https://github.com/bevyengine/bevy/blob/latest/examples/2d/texture_atlas.rs
-    let layout = TextureAtlasLayout::from_grid(UVec2::splat(16), 4, 4, None, None);
+    let layout = TextureAtlasLayout::from_grid(UVec2::splat(PLAYER_SIZE as u32), 4, 4, None, None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
 
@@ -50,8 +52,8 @@ pub fn player(
             }),
             ..default()
         },
-        Transform::from_translation(Vec2::splat(0.0).extend(1.0))
-            .with_scale(Vec2::splat(2.0).extend(1.0)),
+        Transform::from_translation(Vec2::splat(0.0).extend(PLAYER_Z))
+            .with_scale(Vec2::splat(PLAYER_SCALE).extend(1.0)),
         MovementController {
             max_speed,
             ..default()

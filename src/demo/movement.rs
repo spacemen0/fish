@@ -15,15 +15,19 @@
 
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
+use bevy::window::WindowResized;
 
 use crate::AppSet;
 use crate::demo::player::Player;
 use crate::screens::Screen;
 use crate::world::tilemap::{MAP_HEIGHT, MAP_WIDTH, TILE_SCALE, TILE_SIZE};
 
+use super::player::{PLAYER_SCALE, PLAYER_SIZE};
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
     app.register_type::<WithinBoundrie>();
+    app.init_resource::<CameraBounds>();
 
     app.add_systems(
         Update,
@@ -36,6 +40,11 @@ pub(super) fn plugin(app: &mut App) {
             .chain()
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSet::Update),
+    );
+    app.add_systems(OnEnter(Screen::Gameplay), calculate_camera_bounds);
+    app.add_systems(
+        Update,
+        calculate_camera_bounds.run_if(on_event::<WindowResized>),
     );
 }
 
@@ -78,36 +87,85 @@ fn apply_movement(
 pub struct WithinBoundrie;
 
 fn apply_screen_wrap(mut wrap_query: Query<&mut Transform, With<WithinBoundrie>>) {
-    let sprite_size_x = 65.0; // Player sprite size
-    let sprite_size_y = 197.0; // Player sprite size
+    let player_size = PLAYER_SIZE * PLAYER_SCALE;
     let width = MAP_WIDTH as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_width = width / 2.0 - sprite_size_x / 2.0;
+    let half_width = width / 2.0 - player_size / 2.0;
     let height = MAP_HEIGHT as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_height = height / 2.0 - sprite_size_y / 2.0;
+    let half_height = height / 2.0 - player_size / 2.0;
     for mut transform in &mut wrap_query {
         let position = transform.translation.xy();
-        let clamped_x = position.x.clamp(-half_width, half_width);
-        let clamped_y = position.y.clamp(-half_height, half_height);
+        let clamped_x = position.x.clamp(-half_width + 4.0, half_width - 4.0);
+        let clamped_y = position.y.clamp(-half_height + 8.0, half_height - 4.0);
         transform.translation = Vec3::new(clamped_x, clamped_y, transform.translation.z);
     }
 }
 
-fn camera_follow_player(
-    time: Res<Time>,
-    player_query: Query<&Transform, With<Player>>,
-    mut camera_translation: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
+pub struct CameraBounds {
+    pub min: Vec2,
+    pub max: Vec2,
+}
+
+impl FromWorld for CameraBounds {
+    fn from_world(_world: &mut World) -> Self {
+        Self {
+            min: vec2(0.0, 0.0),
+            max: vec2(0.0, 0.0),
+        }
+    }
+}
+
+fn calculate_camera_bounds(
+    mut camera_bounds: ResMut<CameraBounds>,
+    windows: Query<&Window>,
+    projection_query: Query<&Projection, With<Camera2d>>,
 ) {
-    let player_transform = player_query.single().unwrap();
+    let window = windows.single().expect("Window should exist!");
+    let projection = projection_query
+        .single()
+        .expect("Camera projection should exist!");
 
-    let mut camera_transform = camera_translation.single_mut().unwrap();
+    let (win_w, win_h, scale) = match projection {
+        Projection::Orthographic(ortho) => (window.width(), window.height(), ortho.scale),
+        _ => (window.width(), window.height(), 1.0),
+    };
+
+    let half_visible_w = (win_w * 0.5) * scale;
+    let half_visible_h = (win_h * 0.5) * scale;
+
+    let map_width = MAP_WIDTH as f32 * TILE_SIZE as f32 * TILE_SCALE;
+    let map_height = MAP_HEIGHT as f32 * TILE_SIZE as f32 * TILE_SCALE;
+    let half_map_w = map_width / 2.0;
+    let half_map_h = map_height / 2.0;
+
+    camera_bounds.min.x = -half_map_w + half_visible_w;
+    camera_bounds.max.x = half_map_w - half_visible_w;
+    camera_bounds.min.y = -half_map_h + half_visible_h;
+    camera_bounds.max.y = half_map_h - half_visible_h;
+}
+
+fn camera_follow_player(
+    _time: Res<Time>,
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
+    camera_bounds: Res<CameraBounds>,
+) {
+    let player_transform = player_query.single().expect("Player should exist!");
+    let mut camera_transform = camera_query.single_mut().expect("Camera should exist!");
+
     let player_pos = player_transform.translation.xy();
-    let target_position = player_pos.extend(camera_transform.translation.z);
+    let mut target_x = player_pos.x;
+    let mut target_y = player_pos.y;
+    target_x = target_x.clamp(camera_bounds.min.x, camera_bounds.max.x);
+    target_y = target_y.clamp(camera_bounds.min.y, camera_bounds.max.y);
 
-    let smoothness: f32 = 0.75;
+    let target_position = Vec3::new(target_x, target_y, camera_transform.translation.z);
 
-    let t = 1.0 - smoothness.powf(time.delta_secs() * 10.0);
+    // let smoothness: f32 = 0.75;
+    // let t = 1.0 - smoothness.powf(time.delta_secs() * 10.0);
 
-    camera_transform.translation = camera_transform.translation.lerp(target_position, t);
+    camera_transform.translation = target_position;
 }
 
 fn camera_zoom(
@@ -127,7 +185,7 @@ fn camera_zoom(
     }
 
     // Apply zoom to all 2D cameras
-    let mut projection = query.single_mut().unwrap();
+    let mut projection = query.single_mut().expect("Camera should exist!");
     // Adjust zoom speed/sensitivity
     let zoom_speed = 0.1;
 
@@ -135,6 +193,6 @@ fn camera_zoom(
     if let Projection::Orthographic(ref mut ortho) = *projection {
         ortho.scale *= 1.0 - scroll_amount * zoom_speed;
         // Clamp to reasonable limits
-        ortho.scale = ortho.scale.clamp(0.1, 3.0);
+        ortho.scale = ortho.scale.clamp(1.0, 2.0);
     }
 }
