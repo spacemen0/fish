@@ -28,7 +28,7 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
     app.register_type::<WithinBoundrie>();
     app.init_resource::<CameraBounds>();
-
+    app.add_event::<CameraScaleEvent>();
     app.add_systems(
         Update,
         (
@@ -44,7 +44,15 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), calculate_camera_bounds);
     app.add_systems(
         Update,
-        calculate_camera_bounds.run_if(on_event::<WindowResized>),
+        calculate_camera_bounds
+            .run_if(on_event::<WindowResized>.or(on_event::<CameraScaleEvent>))
+            .in_set(AppSet::PreUpdate),
+    );
+    app.add_systems(
+        Update,
+        camera_zoom
+            .run_if(on_event::<MouseWheel>.and(in_state(Screen::Gameplay)))
+            .in_set(AppSet::PreUpdate),
     );
 }
 
@@ -106,6 +114,9 @@ pub struct CameraBounds {
     pub min: Vec2,
     pub max: Vec2,
 }
+
+#[derive(Event)]
+pub struct CameraScaleEvent;
 
 impl FromWorld for CameraBounds {
     fn from_world(_world: &mut World) -> Self {
@@ -170,6 +181,7 @@ fn camera_follow_player(
 
 fn camera_zoom(
     mut scroll_evr: EventReader<MouseWheel>,
+    mut ew: EventWriter<CameraScaleEvent>,
     mut query: Query<&mut Projection, With<Camera2d>>,
 ) {
     // Calculate the total scroll amount from all events
@@ -193,6 +205,7 @@ fn camera_zoom(
     if let Projection::Orthographic(ref mut ortho) = *projection {
         ortho.scale *= 1.0 - scroll_amount * zoom_speed;
         // Clamp to reasonable limits
-        ortho.scale = ortho.scale.clamp(1.0, 2.0);
+        ortho.scale = ortho.scale.clamp(0.8, 1.0);
+        ew.write(CameraScaleEvent);
     }
 }
