@@ -19,6 +19,7 @@ use std::sync::Arc;
 use bevy::ecs::name::Name;
 use bevy::log::{info, warn};
 use bevy::math::Vec2;
+use bevy::reflect::Reflect;
 use bevy::{
     asset::{AssetLoader, AssetPath, io::Reader},
     platform::collections::HashMap,
@@ -40,14 +41,19 @@ impl Plugin for TiledPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_asset::<TiledMap>()
             .register_asset_loader(TiledLoader)
+            .register_type::<TileType>()
             .add_systems(Update, process_loaded_maps);
     }
 }
 
 // Define a component to store tile properties
-#[derive(Component, Default, Debug, Clone)]
-pub struct TileProperties {
-    pub properties: HashMap<String, tiled::PropertyValue>,
+#[derive(Component, Debug, Clone, Reflect)]
+pub enum TileType {
+    Grass,
+    Dirt,
+    Water,
+    Sand,
+    Rock,
 }
 
 #[derive(TypePath, Asset)]
@@ -348,20 +354,19 @@ pub fn process_loaded_maps(
                                     };
 
                                 // Get tile properties from the tileset
-                                let tile_properties = if let Some(tileset) =
-                                    tiled_map.map.tilesets().get(tileset_index)
-                                {
-                                    let props =
+                                let tile_properties: HashMap<String, tiled::PropertyValue> =
+                                    if let Some(tileset) =
+                                        tiled_map.map.tilesets().get(tileset_index)
+                                    {
                                         if let Some(tile_def) = tileset.get_tile(layer_tile.id()) {
                                             // Convert std::collections::HashMap to bevy::utils::HashMap
                                             HashMap::from_iter(tile_def.properties.clone())
                                         } else {
                                             HashMap::default()
-                                        };
-                                    TileProperties { properties: props }
-                                } else {
-                                    TileProperties::default()
-                                };
+                                        }
+                                    } else {
+                                        HashMap::default()
+                                    };
 
                                 let texture_index = match tilemap_texture {
                                     TilemapTexture::Single(_) => layer_tile.id(),
@@ -386,10 +391,25 @@ pub fn process_loaded_maps(
                                             ..Default::default()
                                         },
                                         // Add the tile properties component
-                                        tile_properties,
                                         Name::new(format!("Tile ({}, {})", tile_pos.x, tile_pos.y)),
                                     ))
                                     .id();
+                                if tile_properties.get("type").is_none() {
+                                    warn!("Tile type are empty for tile id {}", layer_tile.id());
+                                } else {
+                                    let tile_type = match tile_properties.get("type").unwrap() {
+                                        tiled::PropertyValue::StringValue(s) => match s.as_str() {
+                                            "Grass" => TileType::Grass,
+                                            "Dirt" => TileType::Dirt,
+                                            "Water" => TileType::Water,
+                                            "Sand" => TileType::Sand,
+                                            "Rock" => TileType::Rock,
+                                            _ => TileType::Grass,
+                                        },
+                                        _ => panic!("Tile type is not a valid string"),
+                                    };
+                                    commands.entity(tile_entity).insert(tile_type);
+                                }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }
                         }

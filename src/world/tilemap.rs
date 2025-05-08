@@ -12,8 +12,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(Screen::Gameplay),
         spawn_tile_map.in_set(AppSet::PreUpdate),
-    )
-    .add_systems(Update, print_properties.in_set(AppSet::Update));
+    );
 }
 
 // CONSTANTS
@@ -97,12 +96,6 @@ fn spawn_tile_map(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn print_properties(query: Query<(Entity, &super::tiledhelper::TileProperties)>) {
-    for (entity, map) in query.iter() {
-        println!("Entity: {:?}", entity);
-        println!("Map Properties: {:?}", map.properties);
-    }
-}
 // Spawn the initial map
 // pub fn spawn_map(mut commands: Commands, tile_asset: Res<TileAssets>) {
 //     // Spawn the map entity

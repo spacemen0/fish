@@ -78,11 +78,12 @@ fn apply_movement(
 pub struct WithinBoundrie;
 
 fn apply_screen_wrap(mut wrap_query: Query<&mut Transform, With<WithinBoundrie>>) {
-    let sprite_size = 64.0; // Player sprite size
+    let sprite_size_x = 65.0; // Player sprite size
+    let sprite_size_y = 197.0; // Player sprite size
     let width = MAP_WIDTH as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_width = width / 2.0 - sprite_size / 2.0;
+    let half_width = width / 2.0 - sprite_size_x / 2.0;
     let height = MAP_HEIGHT as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_height = height / 2.0 - sprite_size / 2.0;
+    let half_height = height / 2.0 - sprite_size_y / 2.0;
     for mut transform in &mut wrap_query {
         let position = transform.translation.xy();
         let clamped_x = position.x.clamp(-half_width, half_width);
