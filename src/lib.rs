@@ -87,5 +87,10 @@ enum AppSet {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn((Name::new("Camera"), Camera2d, Msaa::Off));
+    commands.spawn((
+        Name::new("Camera"),
+        Camera2d,
+        SpritePickingCamera,
+        Msaa::Off,
+    ));
 }

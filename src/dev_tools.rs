@@ -1,6 +1,7 @@
 //! Development tools for the game. This plugin is only enabled in dev builds.
 
 use crate::screens::Screen;
+use bevy::dev_tools::picking_debug::{DebugPickingMode, DebugPickingPlugin};
 use bevy::{
     dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
     ui::UiDebugOptions,
@@ -15,6 +16,8 @@ pub(super) fn plugin(app: &mut App) {
         },
         WorldInspectorPlugin::new(),
     ));
+    app.add_plugins(DebugPickingPlugin)
+        .insert_resource(DebugPickingMode::Normal);
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<Screen>);
 

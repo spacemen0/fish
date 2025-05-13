@@ -17,8 +17,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 use bevy::ecs::name::Name;
+use bevy::ecs::observer::Trigger;
 use bevy::log::{info, warn};
 use bevy::math::Vec2;
+use bevy::picking::Pickable;
+use bevy::picking::events::{Click, Over, Pointer};
 use bevy::reflect::Reflect;
 use bevy::{
     asset::{AssetLoader, AssetPath, io::Reader},
@@ -395,22 +398,23 @@ pub fn process_loaded_maps(
                                             "Tile ({}, {}, {})",
                                             tile_pos.x, tile_pos.y, layer_index
                                         )),
+                                        Pickable::default(),
                                     ))
+                                    .observe(on_tile_hover)
+                                    .observe(on_tile_click)
                                     .id();
                                 if tile_properties.get("type").is_none() {
                                     warn!("Tile type are empty for tile id {}", layer_tile.id());
                                 } else if let Some(tile_type_value) = tile_properties.get("type") {
                                     let tile_type = match tile_type_value {
-                                        tiled::PropertyValue::StringValue(s) => {
-                                            match s.as_str() {
-                                                "Grass" => TileType::Grass,
-                                                "Dirt" => TileType::Dirt,
-                                                "Water" => TileType::Water,
-                                                "Sand" => TileType::Sand,
-                                                "Rock" => TileType::Rock,
-                                                _ => TileType::Grass,
-                                            }
-                                        }
+                                        tiled::PropertyValue::StringValue(s) => match s.as_str() {
+                                            "Grass" => TileType::Grass,
+                                            "Dirt" => TileType::Dirt,
+                                            "Water" => TileType::Water,
+                                            "Sand" => TileType::Sand,
+                                            "Rock" => TileType::Rock,
+                                            _ => TileType::Grass,
+                                        },
                                         _ => {
                                             panic!(
                                                 "Tile type is not a valid string for tile id {}",
@@ -436,6 +440,7 @@ pub fn process_loaded_maps(
                                 .with_scale(Vec2::splat(TILE_SCALE).extend(1.0)),
                             map_type,
                             render_settings: *render_settings,
+
                             ..Default::default()
                         });
 
@@ -446,5 +451,20 @@ pub fn process_loaded_maps(
                 }
             }
         }
+    }
+}
+
+fn on_tile_hover(hover: Trigger<Pointer<Over>>, mut transforms: Query<&mut Transform>) {
+    println!("Hovering over tile: {:?}", hover.target());
+    if let Ok(mut transform) = transforms.get_mut(hover.target()) {
+        transform.scale.x *= 1.1;
+        transform.scale.y *= 1.1;
+    }
+}
+
+fn on_tile_click(click: Trigger<Pointer<Click>>, mut transforms: Query<&mut Transform>) {
+    println!("Clicked on tile: {:?}", click.target());
+    if let Ok(mut transform) = transforms.get_mut(click.target()) {
+        transform.translation.y += 1.0;
     }
 }
