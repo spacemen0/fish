@@ -3,7 +3,7 @@
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
 use crate::{
-    asset_tracking::LoadResource, audio::music, demo::level::spawn_level, screens::Screen,
+    asset_tracking::LoadResource, audio::music, game::level::spawn_level, screens::Screen,
 };
 
 pub(super) fn plugin(app: &mut App) {

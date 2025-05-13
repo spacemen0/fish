@@ -32,7 +32,7 @@ use bevy::{
 use bevy_ecs_tilemap::prelude::*;
 use thiserror::Error;
 
-use super::tilemap::TILE_SCALE;
+use crate::constants::TILE_SCALE;
 
 #[derive(Default)]
 pub struct TiledPlugin;
@@ -399,28 +399,26 @@ pub fn process_loaded_maps(
                                     .id();
                                 if tile_properties.get("type").is_none() {
                                     warn!("Tile type are empty for tile id {}", layer_tile.id());
-                                } else {
-                                    if let Some(tile_type_value) = tile_properties.get("type") {
-                                        let tile_type = match tile_type_value {
-                                            tiled::PropertyValue::StringValue(s) => {
-                                                match s.as_str() {
-                                                    "Grass" => TileType::Grass,
-                                                    "Dirt" => TileType::Dirt,
-                                                    "Water" => TileType::Water,
-                                                    "Sand" => TileType::Sand,
-                                                    "Rock" => TileType::Rock,
-                                                    _ => TileType::Grass,
-                                                }
+                                } else if let Some(tile_type_value) = tile_properties.get("type") {
+                                    let tile_type = match tile_type_value {
+                                        tiled::PropertyValue::StringValue(s) => {
+                                            match s.as_str() {
+                                                "Grass" => TileType::Grass,
+                                                "Dirt" => TileType::Dirt,
+                                                "Water" => TileType::Water,
+                                                "Sand" => TileType::Sand,
+                                                "Rock" => TileType::Rock,
+                                                _ => TileType::Grass,
                                             }
-                                            _ => {
-                                                panic!(
-                                                    "Tile type is not a valid string for tile id {}",
-                                                    layer_tile.id()
-                                                );
-                                            }
-                                        };
-                                        commands.entity(tile_entity).insert(tile_type);
-                                    }
+                                        }
+                                        _ => {
+                                            panic!(
+                                                "Tile type is not a valid string for tile id {}",
+                                                layer_tile.id()
+                                            );
+                                        }
+                                    };
+                                    commands.entity(tile_entity).insert(tile_type);
                                 }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }

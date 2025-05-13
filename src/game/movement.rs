@@ -18,11 +18,11 @@ use bevy::prelude::*;
 use bevy::window::WindowResized;
 
 use crate::AppSet;
-use crate::demo::player::Player;
+use crate::constants::{MAP_HEIGHT, MAP_WIDTH, TILE_SCALE, TILE_SIZE};
+use crate::game::player::Player;
 use crate::screens::Screen;
-use crate::world::tilemap::{MAP_HEIGHT, MAP_WIDTH, TILE_SCALE, TILE_SIZE};
 
-use super::player::{PLAYER_SCALE, PLAYER_SIZE};
+use crate::constants::{PLAYER_SCALE, PLAYER_SIZE};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();

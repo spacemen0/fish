@@ -8,14 +8,14 @@ use bevy::{
 use crate::{
     AppSet,
     asset_tracking::LoadResource,
-    demo::{
+    game::{
         animation::PlayerAnimation,
         movement::{MovementController, WithinBoundrie},
     },
 };
-pub const PLAYER_SIZE: f32 = 16.0;
-pub const PLAYER_SCALE: f32 = 3.0; // Scale for rendering
-pub const PLAYER_Z: f32 = 2.0; // Z position for rendering
+
+use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_SIZE, PLAYER_Z};
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
 
@@ -31,7 +31,6 @@ pub(super) fn plugin(app: &mut App) {
 
 /// The player character.
 pub fn player(
-    max_speed: f32,
     player_assets: &PlayerAssets,
     texture_atlas_layouts: &mut Assets<TextureAtlasLayout>,
 ) -> impl Bundle {
@@ -55,7 +54,7 @@ pub fn player(
         Transform::from_translation(Vec2::splat(0.0).extend(PLAYER_Z))
             .with_scale(Vec2::splat(PLAYER_SCALE).extend(1.0)),
         MovementController {
-            max_speed,
+            max_speed: PLAYER_MAX_SPEED,
             ..default()
         },
         WithinBoundrie,

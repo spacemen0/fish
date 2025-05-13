@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::{
     AppSet,
     audio::sound_effect,
-    demo::{movement::MovementController, player::PlayerAssets},
+    game::{movement::MovementController, player::PlayerAssets},
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -30,12 +30,9 @@ pub(super) fn plugin(app: &mut App) {
 /// Update the sprite direction and animation state (idling/walking).
 fn update_animation_movement(mut player_query: Query<(&MovementController, &mut PlayerAnimation)>) {
     for (controller, mut animation) in &mut player_query {
-        // Determine animation state based on movement direction
         let intent = controller.intent;
 
-        // Default to the current state (in case we don't change it)
         let animation_state = if intent == Vec2::ZERO {
-            // Idle state - maintain the current direction when idle
             match animation.state {
                 PlayerAnimationState::WalkingT | PlayerAnimationState::IdlingT => {
                     PlayerAnimationState::IdlingT
@@ -50,27 +47,19 @@ fn update_animation_movement(mut player_query: Query<(&MovementController, &mut 
                     PlayerAnimationState::IdlingR
                 }
             }
-        } else {
-            // Determine direction based on which component is larger
-            if intent.y.abs() > intent.x.abs() {
-                // Vertical movement is dominant
-                if intent.y > 0.0 {
-                    PlayerAnimationState::WalkingT
-                } else {
-                    PlayerAnimationState::WalkingB
-                }
+        } else if intent.y.abs() > intent.x.abs() {
+            if intent.y > 0.0 {
+                PlayerAnimationState::WalkingT
             } else {
-                // Horizontal movement is dominant
-                if intent.x > 0.0 {
-                    PlayerAnimationState::WalkingR
-                } else {
-                    PlayerAnimationState::WalkingL
-                }
+                PlayerAnimationState::WalkingB
             }
+        } else if intent.x > 0.0 {
+            PlayerAnimationState::WalkingR
+        } else {
+            PlayerAnimationState::WalkingL
         };
 
         if animation.state != animation_state {
-            //setting state changed to true in this method already
             animation.update_state(animation_state);
         }
     }
@@ -84,8 +73,8 @@ fn update_animation_timer(time: Res<Time>, mut query: Query<&mut PlayerAnimation
 }
 
 /// Update the texture atlas to reflect changes in the animation.
-fn update_animation_atlas(mut query: Query<(&mut PlayerAnimation, &mut Sprite)>) {
-    for (mut animation, mut sprite) in &mut query {
+fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite)>) {
+    for (animation, mut sprite) in &mut query {
         let Some(atlas) = sprite.texture_atlas.as_mut() else {
             continue;
         };
@@ -95,7 +84,6 @@ fn update_animation_atlas(mut query: Query<(&mut PlayerAnimation, &mut Sprite)>)
     }
 }
 
-// probably shouldnt use mut
 /// If the player is moving, play a step sound effect synchronized with the
 /// animation.
 fn trigger_step_sound_effect(
@@ -104,10 +92,7 @@ fn trigger_step_sound_effect(
     mut step_query: Query<&mut PlayerAnimation>,
 ) {
     for mut animation in &mut step_query {
-        if animation.state == PlayerAnimationState::WalkingB
-            && animation.changed()
-            && (animation.frame == 2 || animation.frame == 5)
-        {
+        if animation.state.is_walking() && animation.changed() {
             let rng = &mut rand::thread_rng();
             let random_step = player_assets
                 .steps
@@ -143,6 +128,28 @@ pub enum PlayerAnimationState {
     WalkingR,
 }
 
+impl PlayerAnimationState {
+    fn is_walking(&self) -> bool {
+        matches!(
+            self,
+            PlayerAnimationState::WalkingT
+                | PlayerAnimationState::WalkingB
+                | PlayerAnimationState::WalkingL
+                | PlayerAnimationState::WalkingR
+        )
+    }
+
+    fn _is_idling(&self) -> bool {
+        matches!(
+            self,
+            PlayerAnimationState::IdlingT
+                | PlayerAnimationState::IdlingB
+                | PlayerAnimationState::IdlingL
+                | PlayerAnimationState::IdlingR
+        )
+    }
+}
+
 impl PlayerAnimation {
     /// The number of idle frames.
     const IDLE_FRAMES: usize = 2;
@@ -151,9 +158,8 @@ impl PlayerAnimation {
     /// The number of walking frames.
     const WALKING_FRAMES: usize = 2;
     /// The duration of each walking frame.
-    const WALKING_INTERVAL: Duration = Duration::from_millis(200);
+    const WALKING_INTERVAL: Duration = Duration::from_millis(150);
 
-    // Bottom facing animations (index 0-3)
     fn idling_bottom() -> Self {
         Self {
             timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
@@ -172,7 +178,6 @@ impl PlayerAnimation {
         }
     }
 
-    // Left facing animations (index 4-7)
     fn idling_left() -> Self {
         Self {
             timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
@@ -191,7 +196,6 @@ impl PlayerAnimation {
         }
     }
 
-    // Right facing animations (index 8-11)
     fn idling_right() -> Self {
         Self {
             timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
@@ -210,7 +214,6 @@ impl PlayerAnimation {
         }
     }
 
-    // Top facing animations (index 12-15)
     fn idling_top() -> Self {
         Self {
             timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
@@ -269,32 +272,31 @@ impl PlayerAnimation {
     }
 
     /// Whether animation changed this tick.
-    pub fn changed(&mut self) -> bool {
+    pub fn changed(&self) -> bool {
         if self.state_changed {
             true
         } else {
             self.timer.finished()
         }
     }
+
+    /// Set animation state changed.
     pub fn set_state_changed(&mut self, state_changed: bool) {
         self.state_changed = state_changed;
     }
+
     /// Return sprite index in the atlas.
     pub fn get_atlas_index(&self) -> usize {
         match self.state {
-            // Bottom facing animations (first row of the sprite sheet)
             PlayerAnimationState::IdlingB => self.frame,
             PlayerAnimationState::WalkingB => 2 + self.frame,
 
-            // Left facing animations (second row of the sprite sheet)
             PlayerAnimationState::IdlingL => 8 + self.frame,
             PlayerAnimationState::WalkingL => 10 + self.frame,
 
-            // Right facing animations (third row of the sprite sheet)
             PlayerAnimationState::IdlingR => 12 + self.frame,
             PlayerAnimationState::WalkingR => 14 + self.frame,
 
-            // Top facing animations (fourth row of the sprite sheet)
             PlayerAnimationState::IdlingT => 4 + self.frame,
             PlayerAnimationState::WalkingT => 6 + self.frame,
         }
