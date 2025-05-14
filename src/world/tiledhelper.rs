@@ -16,26 +16,22 @@ use std::io::{Cursor, ErrorKind};
 use std::path::Path;
 use std::sync::Arc;
 
-use bevy::ecs::name::Name;
-use bevy::ecs::observer::Trigger;
+use bevy::input::ButtonState;
+use bevy::input::mouse::MouseButtonInput;
 use bevy::log::{info, warn};
-use bevy::math::Vec2;
-use bevy::picking::Pickable;
-use bevy::picking::events::{Click, Over, Pointer};
+use bevy::prelude::*;
 use bevy::reflect::Reflect;
 use bevy::{
     asset::{AssetLoader, AssetPath, io::Reader},
     platform::collections::HashMap,
-    prelude::{
-        Added, Asset, AssetApp, AssetEvent, AssetId, Assets, Bundle, Commands, Component, Entity,
-        EventReader, GlobalTransform, Handle, Image, Plugin, Query, Res, Transform, Update,
-    },
     reflect::TypePath,
 };
 use bevy_ecs_tilemap::prelude::*;
 use thiserror::Error;
 
+use crate::AppSet;
 use crate::constants::TILE_SCALE;
+use crate::game::camera::CursorPos;
 
 #[derive(Default)]
 pub struct TiledPlugin;
@@ -45,11 +41,19 @@ impl Plugin for TiledPlugin {
         app.init_asset::<TiledMap>()
             .register_asset_loader(TiledLoader)
             .register_type::<TileType>()
-            .add_systems(Update, process_loaded_maps);
+            .add_systems(
+                Update,
+                (
+                    process_loaded_maps,
+                    (handle_mouse_highlight, apply_highlight_effect)
+                        .run_if(on_event::<MouseButtonInput>),
+                )
+                    .chain()
+                    .in_set(AppSet::PreUpdate),
+            );
     }
 }
 
-// Define a component to store tile properties
 #[derive(Component, Debug, Clone, Reflect)]
 pub enum TileType {
     Grass,
@@ -58,6 +62,9 @@ pub enum TileType {
     Sand,
     Rock,
 }
+
+#[derive(Component)]
+struct HighlightedTile;
 
 #[derive(TypePath, Asset)]
 pub struct TiledMap {
@@ -398,10 +405,7 @@ pub fn process_loaded_maps(
                                             "Tile ({}, {}, {})",
                                             tile_pos.x, tile_pos.y, layer_index
                                         )),
-                                        Pickable::default(),
                                     ))
-                                    .observe(on_tile_hover)
-                                    .observe(on_tile_click)
                                     .id();
                                 if tile_properties.get("type").is_none() {
                                     warn!("Tile type are empty for tile id {}", layer_tile.id());
@@ -454,17 +458,64 @@ pub fn process_loaded_maps(
     }
 }
 
-fn on_tile_hover(hover: Trigger<Pointer<Over>>, mut transforms: Query<&mut Transform>) {
-    println!("Hovering over tile: {:?}", hover.target());
-    if let Ok(mut transform) = transforms.get_mut(hover.target()) {
-        transform.scale.x *= 1.1;
-        transform.scale.y *= 1.1;
+fn apply_highlight_effect(
+    mut highlighted_tiles_q: Query<&mut TileVisible, Added<HighlightedTile>>,
+) {
+    for mut visible in highlighted_tiles_q.iter_mut() {
+        visible.0 = !visible.0;
     }
 }
+fn handle_mouse_highlight(
+    mut commands: Commands,
+    cursor_pos: Res<CursorPos>,
+    mut mouse_button_input_events: EventReader<MouseButtonInput>,
+    tilemap_q: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapTileSize,
+        &TilemapType,
+        &TileStorage,
+        &Transform,
+        &TilemapAnchor,
+    )>,
+    highlighted_tiles_q: Query<Entity, With<HighlightedTile>>,
+) {
+    let mut clicked = false;
+    for event in mouse_button_input_events.read() {
+        if event.button == MouseButton::Left && event.state == ButtonState::Pressed {
+            clicked = true;
+            break;
+        }
+    }
+    if !clicked {
+        return;
+    }
+    for highlighted_tile_entity in highlighted_tiles_q.iter() {
+        commands
+            .entity(highlighted_tile_entity)
+            .remove::<HighlightedTile>();
+    }
 
-fn on_tile_click(click: Trigger<Pointer<Click>>, mut transforms: Query<&mut Transform>) {
-    println!("Clicked on tile: {:?}", click.target());
-    if let Ok(mut transform) = transforms.get_mut(click.target()) {
-        transform.translation.y += 1.0;
+    for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
+        tilemap_q.iter()
+    {
+        let cursor_pos: Vec2 = cursor_pos.0;
+        let cursor_in_map_pos: Vec2 = {
+            let cursor_pos = Vec4::from((cursor_pos, 0.0, 1.0));
+            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
+            cursor_in_map_pos.xy()
+        };
+        if let Some(tile_pos) = TilePos::from_world_pos(
+            &cursor_in_map_pos,
+            map_size,
+            grid_size,
+            tile_size,
+            map_type,
+            anchor,
+        ) {
+            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
+                commands.entity(tile_entity).insert(HighlightedTile);
+            }
+        }
     }
 }

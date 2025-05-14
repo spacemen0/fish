@@ -8,13 +8,12 @@ use bevy::{
 use crate::{
     AppSet,
     asset_tracking::LoadResource,
-    game::{
-        animation::PlayerAnimation,
-        movement::{MovementController, WithinBoundrie},
-    },
+    game::{animation::PlayerAnimation, movement::MovementController},
 };
 
 use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_SIZE, PLAYER_Z};
+
+use super::camera::WithinBounds;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -57,7 +56,7 @@ pub fn player(
             max_speed: PLAYER_MAX_SPEED,
             ..default()
         },
-        WithinBoundrie,
+        WithinBounds,
         player_animation,
     )
 }
