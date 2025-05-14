@@ -45,16 +45,19 @@ pub(super) fn plugin(app: &mut App) {
 #[reflect(Component)]
 pub struct WithinBounds;
 
+const WRAP_Y_OFFSET: f32 = 12.0;
+
 fn apply_screen_wrap(mut wrap_query: Query<&mut Transform, With<WithinBounds>>) {
-    let player_size = PLAYER_SIZE * PLAYER_SCALE;
+    let player_size_x = (GRID_SIZE_X - 8) as f32 * PLAYER_SCALE;
+    let player_size_y = (GRID_SIZE_Y - 14) as f32 * PLAYER_SCALE;
     let width = MAP_WIDTH as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_width = width / 2.0 - player_size / 2.0;
+    let half_width = width / 2.0 - player_size_x / 2.0;
     let height = MAP_HEIGHT as f32 * TILE_SIZE as f32 * TILE_SCALE;
-    let half_height = height / 2.0 - player_size / 2.0;
+    let half_height = height / 2.0 - player_size_y / 2.0;
     for mut transform in &mut wrap_query {
         let position = transform.translation.xy();
-        let clamped_x = position.x.clamp(-half_width + 4.0, half_width - 4.0);
-        let clamped_y = position.y.clamp(-half_height + 8.0, half_height - 4.0);
+        let clamped_x = position.x.clamp(-half_width, half_width);
+        let clamped_y = position.y.clamp(-half_height + WRAP_Y_OFFSET, half_height);
         transform.translation = Vec3::new(clamped_x, clamped_y, transform.translation.z);
     }
 }
@@ -120,7 +123,7 @@ fn camera_follow_player(
     let mut target_x = player_pos.x;
     let mut target_y = player_pos.y;
     target_x = target_x.clamp(camera_bounds.min.x, camera_bounds.max.x);
-    target_y = target_y.clamp(camera_bounds.min.y, camera_bounds.max.y);
+    target_y = target_y.clamp(camera_bounds.min.y - WRAP_Y_OFFSET, camera_bounds.max.y);
 
     let target_position = Vec3::new(target_x, target_y, camera_transform.translation.z);
 

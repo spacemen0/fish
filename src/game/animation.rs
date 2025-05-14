@@ -291,14 +291,14 @@ impl PlayerAnimation {
             PlayerAnimationState::IdlingB => self.frame,
             PlayerAnimationState::WalkingB => 2 + self.frame,
 
-            PlayerAnimationState::IdlingL => 8 + self.frame,
-            PlayerAnimationState::WalkingL => 10 + self.frame,
+            PlayerAnimationState::IdlingL => 32 + self.frame,
+            PlayerAnimationState::WalkingL => 34 + self.frame,
 
-            PlayerAnimationState::IdlingR => 12 + self.frame,
-            PlayerAnimationState::WalkingR => 14 + self.frame,
+            PlayerAnimationState::IdlingR => 48 + self.frame,
+            PlayerAnimationState::WalkingR => 50 + self.frame,
 
-            PlayerAnimationState::IdlingT => 4 + self.frame,
-            PlayerAnimationState::WalkingT => 6 + self.frame,
+            PlayerAnimationState::IdlingT => 16 + self.frame,
+            PlayerAnimationState::WalkingT => 18 + self.frame,
         }
     }
 }

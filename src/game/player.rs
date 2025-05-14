@@ -8,10 +8,11 @@ use bevy::{
 use crate::{
     AppSet,
     asset_tracking::LoadResource,
+    constants::{GRID_SIZE_X, GRID_SIZE_Y},
     game::{animation::PlayerAnimation, movement::MovementController},
 };
 
-use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_SIZE, PLAYER_Z};
+use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_Z};
 
 use super::camera::WithinBounds;
 
@@ -35,7 +36,8 @@ pub fn player(
 ) -> impl Bundle {
     // A texture atlas is a way to split a single image into a grid of related images.
     // You can learn more in this example: https://github.com/bevyengine/bevy/blob/latest/examples/2d/texture_atlas.rs
-    let layout = TextureAtlasLayout::from_grid(UVec2::splat(PLAYER_SIZE as u32), 4, 4, None, None);
+    let layout =
+        TextureAtlasLayout::from_grid(UVec2::new(GRID_SIZE_X, GRID_SIZE_Y), 16, 6, None, None);
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
     let player_animation = PlayerAnimation::new();
 
@@ -43,7 +45,7 @@ pub fn player(
         Name::new("Player"),
         Player,
         Sprite {
-            image: player_assets.ducky.clone(),
+            image: player_assets.player.clone(),
             texture_atlas: Some(TextureAtlas {
                 layout: texture_atlas_layout,
                 index: player_animation.get_atlas_index(),
@@ -98,7 +100,7 @@ fn record_player_directional_input(
 #[reflect(Resource)]
 pub struct PlayerAssets {
     #[dependency]
-    ducky: Handle<Image>,
+    player: Handle<Image>,
     #[dependency]
     pub steps: Vec<Handle<AudioSource>>,
 }
@@ -107,7 +109,7 @@ impl FromWorld for PlayerAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
         Self {
-            ducky: assets.load_with_settings(
+            player: assets.load_with_settings(
                 "images/character.png",
                 |settings: &mut ImageLoaderSettings| {
                     // Use `nearest` image sampling to preserve pixel art style.
