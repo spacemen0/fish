@@ -14,7 +14,7 @@ use crate::{
 
 use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_Z};
 
-use super::camera::WithinBounds;
+use super::{animation::PlayerActionState, camera::WithinBounds};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -60,6 +60,7 @@ pub fn player(
         },
         WithinBounds,
         player_animation,
+        PlayerActionState::default(),
     )
 }
 

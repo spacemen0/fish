@@ -18,7 +18,6 @@ use bevy::prelude::*;
 use crate::AppSet;
 use crate::screens::Screen;
 
-
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
     app.add_systems(

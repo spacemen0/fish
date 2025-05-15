@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 use rand::prelude::*;
 use std::time::Duration;
 
@@ -16,6 +16,7 @@ pub(super) fn plugin(app: &mut App) {
         (
             update_animation_timer.in_set(AppSet::TickTimers),
             (
+                update_player_actions,
                 update_animation_movement,
                 update_animation_atlas,
                 trigger_step_sound_effect,
@@ -27,37 +28,200 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-/// Update the sprite direction and animation state (idling/walking).
-fn update_animation_movement(mut player_query: Query<(&MovementController, &mut PlayerAnimation)>) {
-    for (controller, mut animation) in &mut player_query {
-        let intent = controller.intent;
+/// Represents the direction of the player animation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
 
-        let animation_state = if intent == Vec2::ZERO {
-            match animation.state {
-                PlayerAnimationState::WalkingT | PlayerAnimationState::IdlingT => {
-                    PlayerAnimationState::IdlingT
-                }
-                PlayerAnimationState::WalkingB | PlayerAnimationState::IdlingB => {
-                    PlayerAnimationState::IdlingB
-                }
-                PlayerAnimationState::WalkingL | PlayerAnimationState::IdlingL => {
-                    PlayerAnimationState::IdlingL
-                }
-                PlayerAnimationState::WalkingR | PlayerAnimationState::IdlingR => {
-                    PlayerAnimationState::IdlingR
+#[derive(Component, Debug, Default)]
+pub struct PlayerActionState {
+    pub current_action: Option<ActionType>,
+    pub action_progress: f32, // 0.0 to 1.0
+}
+
+/// Represents the action type of the player animation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionType {
+    Idling,
+    Walking,
+    Hoeing,
+    Watering,
+    // Add more actions in the future
+}
+
+impl PlayerAnimationState {
+    // Get the direction component of this state
+    pub fn get_direction(&self) -> Direction {
+        match self {
+            Self::IdlingT | Self::WalkingT | Self::HoeingT | Self::WateringT => Direction::Top,
+            Self::IdlingB | Self::WalkingB | Self::HoeingB | Self::WateringB => Direction::Bottom,
+            Self::IdlingL | Self::WalkingL | Self::HoeingL | Self::WateringL => Direction::Left,
+            Self::IdlingR | Self::WalkingR | Self::HoeingR | Self::WateringR => Direction::Right,
+        }
+    }
+
+    // Get the action type component of this state
+    pub fn get_action_type(&self) -> ActionType {
+        match self {
+            Self::IdlingT | Self::IdlingB | Self::IdlingL | Self::IdlingR => ActionType::Idling,
+            Self::WalkingT | Self::WalkingB | Self::WalkingL | Self::WalkingR => {
+                ActionType::Walking
+            }
+            Self::HoeingT | Self::HoeingB | Self::HoeingL | Self::HoeingR => ActionType::Hoeing,
+            Self::WateringT | Self::WateringB | Self::WateringL | Self::WateringR => {
+                ActionType::Watering
+            }
+        }
+    }
+
+    // Create a state from action and direction
+    pub fn from_action_and_direction(action: ActionType, direction: Direction) -> Self {
+        match (action, direction) {
+            (ActionType::Idling, Direction::Top) => Self::IdlingT,
+            (ActionType::Idling, Direction::Bottom) => Self::IdlingB,
+            (ActionType::Idling, Direction::Left) => Self::IdlingL,
+            (ActionType::Idling, Direction::Right) => Self::IdlingR,
+
+            (ActionType::Walking, Direction::Top) => Self::WalkingT,
+            (ActionType::Walking, Direction::Bottom) => Self::WalkingB,
+            (ActionType::Walking, Direction::Left) => Self::WalkingL,
+            (ActionType::Walking, Direction::Right) => Self::WalkingR,
+
+            (ActionType::Hoeing, Direction::Top) => Self::HoeingT,
+            (ActionType::Hoeing, Direction::Bottom) => Self::HoeingB,
+            (ActionType::Hoeing, Direction::Left) => Self::HoeingL,
+            (ActionType::Hoeing, Direction::Right) => Self::HoeingR,
+
+            (ActionType::Watering, Direction::Top) => Self::WateringT,
+            (ActionType::Watering, Direction::Bottom) => Self::WateringB,
+            (ActionType::Watering, Direction::Left) => Self::WateringL,
+            (ActionType::Watering, Direction::Right) => Self::WateringR,
+        }
+    }
+}
+
+fn update_player_actions(
+    time: Res<Time>,
+    input: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<(
+        &mut PlayerAnimation,
+        &mut PlayerActionState,
+        &MovementController,
+    )>,
+) {
+    for (mut animation, mut action_state, controller) in &mut player_query {
+        // Get current direction from animation state
+        let direction = animation.state.get_direction();
+
+        // Check for new action triggers
+        if action_state.current_action.is_none() {
+            // Only allow starting actions when not moving
+            if controller.intent == Vec2::ZERO {
+                if input.just_pressed(KeyCode::KeyE) {
+                    // Start watering action
+                    action_state.current_action = Some(ActionType::Watering);
+                    action_state.action_progress = 0.0;
+
+                    // Set animation state based on current direction
+                    let new_state = match direction {
+                        Direction::Top => PlayerAnimationState::WateringT,
+                        Direction::Bottom => PlayerAnimationState::WateringB,
+                        Direction::Left => PlayerAnimationState::WateringL,
+                        Direction::Right => PlayerAnimationState::WateringR,
+                    };
+                    animation.update_state(new_state);
+                } else if input.just_pressed(KeyCode::KeyQ) {
+                    // Start chopping action
+                    action_state.current_action = Some(ActionType::Hoeing);
+                    action_state.action_progress = 0.0;
+
+                    // Set animation state based on current direction
+                    let new_state = match direction {
+                        Direction::Top => PlayerAnimationState::HoeingT,
+                        Direction::Bottom => PlayerAnimationState::HoeingB,
+                        Direction::Left => PlayerAnimationState::HoeingL,
+                        Direction::Right => PlayerAnimationState::HoeingR,
+                    };
+                    animation.update_state(new_state);
                 }
             }
-        } else if intent.y.abs() > intent.x.abs() {
-            if intent.y > 0.0 {
-                PlayerAnimationState::WalkingT
-            } else {
-                PlayerAnimationState::WalkingB
-            }
-        } else if intent.x > 0.0 {
-            PlayerAnimationState::WalkingR
         } else {
-            PlayerAnimationState::WalkingL
+            // Update existing action
+            action_state.action_progress += time.delta_secs();
+
+            // Check if action is complete (adjust times based on your animations)
+            let action_duration = match action_state.current_action {
+                Some(ActionType::Watering) => 0.6, // seconds
+                Some(ActionType::Hoeing) => 0.6,   // seconds
+                _ => 0.0,
+            };
+
+            if action_state.action_progress >= action_duration {
+                // Action complete, return to idle state
+                action_state.current_action = None;
+
+                // Return to idle state based on current direction
+                let new_state = match direction {
+                    Direction::Top => PlayerAnimationState::IdlingT,
+                    Direction::Bottom => PlayerAnimationState::IdlingB,
+                    Direction::Left => PlayerAnimationState::IdlingL,
+                    Direction::Right => PlayerAnimationState::IdlingR,
+                };
+                animation.update_state(new_state);
+            }
+        }
+    }
+}
+
+/// Update the sprite direction and animation state (idling/walking).
+fn update_animation_movement(
+    mut player_query: Query<(
+        &MovementController,
+        &mut PlayerAnimation,
+        &PlayerActionState,
+    )>,
+) {
+    for (controller, mut animation, state) in &mut player_query {
+        if state.current_action.is_some() {
+            continue;
+        }
+        let intent = controller.intent;
+        let current_direction = animation.state.get_direction();
+        let current_action = animation.state.get_action_type();
+        // Determine new direction and action based on movement
+        let (new_direction, new_action) = if intent == Vec2::ZERO {
+            // Keep current direction, but if walking, transition to idle
+            let action = if current_action == ActionType::Walking {
+                ActionType::Idling
+            } else {
+                current_action
+            };
+            (current_direction, action)
+        } else {
+            // Determine direction from movement and set action to walking
+            let direction = if intent.y.abs() > intent.x.abs() {
+                if intent.y > 0.0 {
+                    Direction::Top
+                } else {
+                    Direction::Bottom
+                }
+            } else {
+                if intent.x > 0.0 {
+                    Direction::Right
+                } else {
+                    Direction::Left
+                }
+            };
+            (direction, ActionType::Walking)
         };
+
+        // Create the new animation state
+        let animation_state =
+            PlayerAnimationState::from_action_and_direction(new_action, new_direction);
 
         if animation.state != animation_state {
             animation.update_state(animation_state);
@@ -80,6 +244,7 @@ fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite)>) {
         };
         if animation.changed() {
             atlas.index = animation.get_atlas_index();
+            sprite.anchor = Anchor::Custom(animation.state.get_anchor_point(animation.frame));
         }
     }
 }
@@ -126,6 +291,14 @@ pub enum PlayerAnimationState {
     WalkingB,
     WalkingL,
     WalkingR,
+    HoeingT,
+    HoeingB,
+    HoeingL,
+    HoeingR,
+    WateringT,
+    WateringB,
+    WateringL,
+    WateringR,
 }
 
 impl PlayerAnimationState {
@@ -148,6 +321,39 @@ impl PlayerAnimationState {
                 | PlayerAnimationState::IdlingR
         )
     }
+    pub fn get_anchor_point(&self, frame: usize) -> Vec2 {
+        match self {
+            PlayerAnimationState::HoeingL => {
+                if frame == 1 {
+                    Vec2::new(0.7, 0.5)
+                } else {
+                    Vec2::new(0.5, 0.5)
+                }
+            }
+            PlayerAnimationState::HoeingR => {
+                if frame == 1 {
+                    Vec2::new(0.3, 0.5)
+                } else {
+                    Vec2::new(0.5, 0.5)
+                }
+            }
+            PlayerAnimationState::WateringR => {
+                if frame == 1 {
+                    Vec2::new(0.3, 0.5)
+                } else {
+                    Vec2::new(0.25, 0.5)
+                }
+            }
+            PlayerAnimationState::WateringL => {
+                if frame == 1 {
+                    Vec2::new(0.8, 0.5)
+                } else {
+                    Vec2::new(0.75, 0.5)
+                }
+            }
+            _ => Vec2::new(0.5, 0.5),
+        }
+    }
 }
 
 impl PlayerAnimation {
@@ -157,83 +363,24 @@ impl PlayerAnimation {
     const IDLE_INTERVAL: Duration = Duration::from_millis(500);
     /// The number of walking frames.
     const WALKING_FRAMES: usize = 2;
+
+    const HOEING_FRAMES: usize = 2;
+    const WATERING_FRAMES: usize = 2;
     /// The duration of each walking frame.
     const WALKING_INTERVAL: Duration = Duration::from_millis(150);
-
-    fn idling_bottom() -> Self {
+    const HOEING_INTERVAL: Duration = Duration::from_millis(300);
+    const WATERING_INTERVAL: Duration = Duration::from_millis(300);
+    fn internal_new(duration: Duration, state: PlayerAnimationState) -> Self {
         Self {
-            timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
+            timer: Timer::new(duration, TimerMode::Repeating),
             frame: 0,
-            state: PlayerAnimationState::IdlingB,
-            state_changed: true,
-        }
-    }
-
-    fn walking_bottom() -> Self {
-        Self {
-            timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::WalkingB,
-            state_changed: true,
-        }
-    }
-
-    fn idling_left() -> Self {
-        Self {
-            timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::IdlingL,
-            state_changed: true,
-        }
-    }
-
-    fn walking_left() -> Self {
-        Self {
-            timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::WalkingL,
-            state_changed: true,
-        }
-    }
-
-    fn idling_right() -> Self {
-        Self {
-            timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::IdlingR,
-            state_changed: true,
-        }
-    }
-
-    fn walking_right() -> Self {
-        Self {
-            timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::WalkingR,
-            state_changed: true,
-        }
-    }
-
-    fn idling_top() -> Self {
-        Self {
-            timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::IdlingT,
-            state_changed: true,
-        }
-    }
-
-    fn walking_top() -> Self {
-        Self {
-            timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
-            frame: 0,
-            state: PlayerAnimationState::WalkingT,
+            state,
             state_changed: true,
         }
     }
 
     pub fn new() -> Self {
-        Self::idling_bottom()
+        Self::internal_new(Self::IDLE_INTERVAL, PlayerAnimationState::IdlingB)
     }
 
     /// Update animation timers.
@@ -252,6 +399,14 @@ impl PlayerAnimation {
                 PlayerAnimationState::WalkingL => Self::WALKING_FRAMES,
                 PlayerAnimationState::WalkingR => Self::WALKING_FRAMES,
                 PlayerAnimationState::WalkingB => Self::WALKING_FRAMES,
+                PlayerAnimationState::HoeingT => Self::HOEING_FRAMES,
+                PlayerAnimationState::HoeingL => Self::HOEING_FRAMES,
+                PlayerAnimationState::HoeingR => Self::HOEING_FRAMES,
+                PlayerAnimationState::HoeingB => Self::HOEING_FRAMES,
+                PlayerAnimationState::WateringT => Self::WATERING_FRAMES,
+                PlayerAnimationState::WateringL => Self::WATERING_FRAMES,
+                PlayerAnimationState::WateringR => Self::WATERING_FRAMES,
+                PlayerAnimationState::WateringB => Self::WATERING_FRAMES,
             };
     }
 
@@ -259,14 +414,62 @@ impl PlayerAnimation {
     pub fn update_state(&mut self, state: PlayerAnimationState) {
         if self.state != state {
             match state {
-                PlayerAnimationState::IdlingB => *self = Self::idling_bottom(),
-                PlayerAnimationState::WalkingB => *self = Self::walking_bottom(),
-                PlayerAnimationState::IdlingT => *self = Self::idling_top(),
-                PlayerAnimationState::IdlingL => *self = Self::idling_left(),
-                PlayerAnimationState::IdlingR => *self = Self::idling_right(),
-                PlayerAnimationState::WalkingT => *self = Self::walking_top(),
-                PlayerAnimationState::WalkingL => *self = Self::walking_left(),
-                PlayerAnimationState::WalkingR => *self = Self::walking_right(),
+                PlayerAnimationState::IdlingB => {
+                    *self = Self::internal_new(Self::IDLE_INTERVAL, PlayerAnimationState::IdlingB)
+                }
+                PlayerAnimationState::IdlingT => {
+                    *self = Self::internal_new(Self::IDLE_INTERVAL, PlayerAnimationState::IdlingT)
+                }
+                PlayerAnimationState::IdlingL => {
+                    *self = Self::internal_new(Self::IDLE_INTERVAL, PlayerAnimationState::IdlingL)
+                }
+                PlayerAnimationState::IdlingR => {
+                    *self = Self::internal_new(Self::IDLE_INTERVAL, PlayerAnimationState::IdlingR)
+                }
+                PlayerAnimationState::WalkingB => {
+                    *self =
+                        Self::internal_new(Self::WALKING_INTERVAL, PlayerAnimationState::WalkingB)
+                }
+                PlayerAnimationState::WalkingT => {
+                    *self =
+                        Self::internal_new(Self::WALKING_INTERVAL, PlayerAnimationState::WalkingT)
+                }
+                PlayerAnimationState::WalkingL => {
+                    *self =
+                        Self::internal_new(Self::WALKING_INTERVAL, PlayerAnimationState::WalkingL)
+                }
+                PlayerAnimationState::WalkingR => {
+                    *self =
+                        Self::internal_new(Self::WALKING_INTERVAL, PlayerAnimationState::WalkingR)
+                }
+                PlayerAnimationState::HoeingT => {
+                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingT)
+                }
+                PlayerAnimationState::HoeingB => {
+                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingB)
+                }
+                PlayerAnimationState::HoeingL => {
+                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingL)
+                }
+                PlayerAnimationState::HoeingR => {
+                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingR)
+                }
+                PlayerAnimationState::WateringT => {
+                    *self =
+                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringT)
+                }
+                PlayerAnimationState::WateringB => {
+                    *self =
+                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringB)
+                }
+                PlayerAnimationState::WateringL => {
+                    *self =
+                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringL)
+                }
+                PlayerAnimationState::WateringR => {
+                    *self =
+                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringR)
+                }
             }
         }
     }
@@ -290,15 +493,20 @@ impl PlayerAnimation {
         match self.state {
             PlayerAnimationState::IdlingB => self.frame,
             PlayerAnimationState::WalkingB => 2 + self.frame,
-
             PlayerAnimationState::IdlingL => 32 + self.frame,
             PlayerAnimationState::WalkingL => 34 + self.frame,
-
             PlayerAnimationState::IdlingR => 48 + self.frame,
             PlayerAnimationState::WalkingR => 50 + self.frame,
-
             PlayerAnimationState::IdlingT => 16 + self.frame,
             PlayerAnimationState::WalkingT => 18 + self.frame,
+            PlayerAnimationState::HoeingT => 20 + self.frame,
+            PlayerAnimationState::HoeingB => 4 + self.frame,
+            PlayerAnimationState::HoeingL => 36 + self.frame,
+            PlayerAnimationState::HoeingR => 52 + self.frame,
+            PlayerAnimationState::WateringT => 24 + self.frame,
+            PlayerAnimationState::WateringB => 8 + self.frame,
+            PlayerAnimationState::WateringL => 40 + self.frame,
+            PlayerAnimationState::WateringR => 56 + self.frame,
         }
     }
 }
