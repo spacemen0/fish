@@ -46,8 +46,6 @@ pub struct PlayerActionState {
 /// Represents the action type of the player animation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionType {
-    Idling,
-    Walking,
     Hoeing,
     Watering,
     Chopping,
@@ -72,36 +70,9 @@ impl PlayerAnimationState {
         }
     }
 
-    // Get the action type component of this state
-    pub fn get_action_type(&self) -> ActionType {
-        match self {
-            Self::IdlingT | Self::IdlingB | Self::IdlingL | Self::IdlingR => ActionType::Idling,
-            Self::WalkingT | Self::WalkingB | Self::WalkingL | Self::WalkingR => {
-                ActionType::Walking
-            }
-            Self::HoeingT | Self::HoeingB | Self::HoeingL | Self::HoeingR => ActionType::Hoeing,
-            Self::WateringT | Self::WateringB | Self::WateringL | Self::WateringR => {
-                ActionType::Watering
-            }
-            Self::ChoppingT | Self::ChoppingB | Self::ChoppingL | Self::ChoppingR => {
-                ActionType::Chopping
-            }
-        }
-    }
-
     // Create a state from action and direction
     pub fn from_action_and_direction(action: ActionType, direction: Direction) -> Self {
         match (action, direction) {
-            (ActionType::Idling, Direction::Top) => Self::IdlingT,
-            (ActionType::Idling, Direction::Bottom) => Self::IdlingB,
-            (ActionType::Idling, Direction::Left) => Self::IdlingL,
-            (ActionType::Idling, Direction::Right) => Self::IdlingR,
-
-            (ActionType::Walking, Direction::Top) => Self::WalkingT,
-            (ActionType::Walking, Direction::Bottom) => Self::WalkingB,
-            (ActionType::Walking, Direction::Left) => Self::WalkingL,
-            (ActionType::Walking, Direction::Right) => Self::WalkingR,
-
             (ActionType::Hoeing, Direction::Top) => Self::HoeingT,
             (ActionType::Hoeing, Direction::Bottom) => Self::HoeingB,
             (ActionType::Hoeing, Direction::Left) => Self::HoeingL,
@@ -143,12 +114,10 @@ fn update_player_actions(
                     action_state.action_progress = 0.0;
 
                     // Set animation state based on current direction
-                    let new_state = match direction {
-                        Direction::Top => PlayerAnimationState::WateringT,
-                        Direction::Bottom => PlayerAnimationState::WateringB,
-                        Direction::Left => PlayerAnimationState::WateringL,
-                        Direction::Right => PlayerAnimationState::WateringR,
-                    };
+                    let new_state = PlayerAnimationState::from_action_and_direction(
+                        action_state.current_action.unwrap(),
+                        direction,
+                    );
                     animation.update_state(new_state);
                 } else if input.just_pressed(KeyCode::KeyQ) {
                     // Start chopping action
@@ -156,12 +125,10 @@ fn update_player_actions(
                     action_state.action_progress = 0.0;
 
                     // Set animation state based on current direction
-                    let new_state = match direction {
-                        Direction::Top => PlayerAnimationState::HoeingT,
-                        Direction::Bottom => PlayerAnimationState::HoeingB,
-                        Direction::Left => PlayerAnimationState::HoeingL,
-                        Direction::Right => PlayerAnimationState::HoeingR,
-                    };
+                    let new_state = PlayerAnimationState::from_action_and_direction(
+                        action_state.current_action.unwrap(),
+                        direction,
+                    );
                     animation.update_state(new_state);
                 } else if input.just_pressed(KeyCode::KeyF) {
                     // Start hoeing action
@@ -169,12 +136,10 @@ fn update_player_actions(
                     action_state.action_progress = 0.0;
 
                     // Set animation state based on current direction
-                    let new_state = match direction {
-                        Direction::Top => PlayerAnimationState::ChoppingT,
-                        Direction::Bottom => PlayerAnimationState::ChoppingB,
-                        Direction::Left => PlayerAnimationState::ChoppingL,
-                        Direction::Right => PlayerAnimationState::ChoppingR,
-                    };
+                    let new_state = PlayerAnimationState::from_action_and_direction(
+                        action_state.current_action.unwrap(),
+                        direction,
+                    );
                     animation.update_state(new_state);
                 }
             }
@@ -222,35 +187,29 @@ fn update_animation_movement(
         }
         let intent = controller.intent;
         let current_direction = animation.state.get_direction();
-        let current_action = animation.state.get_action_type();
+
         // Determine new direction and action based on movement
-        let (new_direction, new_action) = if intent == Vec2::ZERO {
-            // Keep current direction, but if walking, transition to idle
-            let action = if current_action == ActionType::Walking {
-                ActionType::Idling
-            } else {
-                current_action
-            };
-            (current_direction, action)
+        let animation_state = if intent == Vec2::ZERO {
+            match current_direction {
+                Direction::Top => PlayerAnimationState::IdlingT,
+                Direction::Bottom => PlayerAnimationState::IdlingB,
+                Direction::Left => PlayerAnimationState::IdlingL,
+                Direction::Right => PlayerAnimationState::IdlingR,
+            }
         } else {
             // Determine direction from movement and set action to walking
-            let direction = if intent.y.abs() > intent.x.abs() {
+            if intent.y.abs() > intent.x.abs() {
                 if intent.y > 0.0 {
-                    Direction::Top
+                    PlayerAnimationState::WalkingT
                 } else {
-                    Direction::Bottom
+                    PlayerAnimationState::WalkingB
                 }
             } else if intent.x > 0.0 {
-                Direction::Right
+                PlayerAnimationState::WalkingR
             } else {
-                Direction::Left
-            };
-            (direction, ActionType::Walking)
+                PlayerAnimationState::WalkingL
+            }
         };
-
-        // Create the new animation state
-        let animation_state =
-            PlayerAnimationState::from_action_and_direction(new_action, new_direction);
 
         if animation.state != animation_state {
             animation.update_state(animation_state);
