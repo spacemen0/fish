@@ -1,10 +1,10 @@
 use bevy::{
     input::mouse::{MouseScrollUnit, MouseWheel},
     prelude::*,
-    window::WindowResized,
+    window::{PrimaryWindow, WindowResized},
 };
 
-use crate::{AppSet, constants::*, screens::Screen};
+use crate::{AppSystems, constants::*, screens::Screen};
 
 use super::player::Player;
 
@@ -13,31 +13,20 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<CameraBounds>();
     app.init_resource::<CursorPos>();
     app.add_event::<CameraScaleEvent>();
-    app.add_systems(
-        Update,
-        (
-            apply_screen_wrap,
-            camera_follow_player,
-            camera_zoom,
-            update_cursor_pos.run_if(on_event::<CursorMoved>),
-        )
-            .chain()
-            .run_if(in_state(Screen::Gameplay))
-            .in_set(AppSet::Update),
-    );
-    app.add_systems(
-        Update,
-        calculate_camera_bounds
-            .run_if(on_event::<WindowResized>.or(on_event::<CameraScaleEvent>))
-            .in_set(AppSet::PreUpdate),
-    );
     app.add_systems(OnEnter(Screen::Gameplay), calculate_camera_bounds);
 
     app.add_systems(
         Update,
-        camera_zoom
-            .run_if(on_event::<MouseWheel>.and(in_state(Screen::Gameplay)))
-            .in_set(AppSet::PreUpdate),
+        (
+            camera_zoom.run_if(on_event::<MouseWheel>),
+            update_cursor_pos,
+            apply_screen_wrap,
+            camera_follow_player,
+            calculate_camera_bounds
+                .run_if(on_event::<WindowResized>.or(on_event::<CameraScaleEvent>)),
+        )
+            .in_set(AppSystems::PostUpdate)
+            .run_if(in_state(Screen::Gameplay)),
     );
 }
 
@@ -159,7 +148,7 @@ fn camera_zoom(
     if let Projection::Orthographic(ref mut ortho) = *projection {
         ortho.scale *= 1.0 - scroll_amount * zoom_speed;
         // Clamp to reasonable limits
-        ortho.scale = ortho.scale.clamp(0.8, 1.0);
+        ortho.scale = ortho.scale.clamp(0.2, 1.0);
         ew.write(CameraScaleEvent);
     }
 }
@@ -174,17 +163,15 @@ impl Default for CursorPos {
 }
 fn update_cursor_pos(
     camera_q: Query<(&GlobalTransform, &Camera)>,
-    mut cursor_moved_events: EventReader<CursorMoved>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
     mut cursor_pos: ResMut<CursorPos>,
 ) {
-    for cursor_moved in cursor_moved_events.read() {
-        // To get the mouse's world position, we have to transform its window position by
-        // any transforms on the camera. This is done by projecting the cursor position into
-        // camera space (world space).
-        for (cam_t, cam) in camera_q.iter() {
-            if let Ok(pos) = cam.viewport_to_world_2d(cam_t, cursor_moved.position) {
-                *cursor_pos = CursorPos(pos);
-            }
+    let (cam_t, cam) = camera_q.single().expect("Camera should exist!");
+    let window = q_window.single().expect("Window should exist!");
+    if let Some(pos) = window.cursor_position() {
+        // Convert the cursor position to world space
+        if let Ok(pos) = cam.viewport_to_world_2d(cam_t, pos) {
+            *cursor_pos = CursorPos(pos);
         }
     }
 }

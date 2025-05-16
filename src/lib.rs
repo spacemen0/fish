@@ -22,10 +22,11 @@ impl Plugin for AppPlugin {
         app.configure_sets(
             Update,
             (
-                AppSet::TickTimers,
-                AppSet::RecordInput,
-                AppSet::PreUpdate,
-                AppSet::Update,
+                AppSystems::TickTimers,
+                AppSystems::RecordInput,
+                AppSystems::PreUpdate,
+                AppSystems::Update,
+                AppSystems::PostUpdate,
             )
                 .chain(),
         );
@@ -76,14 +77,14 @@ impl Plugin for AppPlugin {
 /// When adding a new variant, make sure to order it in the `configure_sets`
 /// call above.
 #[derive(SystemSet, Debug, Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
-enum AppSet {
+enum AppSystems {
     /// Tick timers.
     TickTimers,
     /// Record player input.
     RecordInput,
     PreUpdate,
-    /// Do everything else (consider splitting this into further variants).
     Update,
+    PostUpdate,
 }
 
 fn spawn_camera(mut commands: Commands) {

@@ -15,7 +15,7 @@
 
 use bevy::prelude::*;
 
-use crate::AppSet;
+use crate::AppSystems;
 use crate::screens::Screen;
 
 pub(super) fn plugin(app: &mut App) {
@@ -23,9 +23,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (apply_movement,)
-            .chain()
             .run_if(in_state(Screen::Gameplay))
-            .in_set(AppSet::Update),
+            .in_set(AppSystems::Update),
     );
 }
 

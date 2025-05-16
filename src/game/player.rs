@@ -6,7 +6,7 @@ use bevy::{
 };
 
 use crate::{
-    AppSet,
+    AppSystems,
     asset_tracking::LoadResource,
     constants::{GRID_SIZE_X, GRID_SIZE_Y},
     game::{animation::PlayerAnimation, movement::MovementController},
@@ -25,7 +25,7 @@ pub(super) fn plugin(app: &mut App) {
     // Record directional input as movement controls.
     app.add_systems(
         Update,
-        record_player_directional_input.in_set(AppSet::RecordInput),
+        record_player_directional_input.in_set(AppSystems::RecordInput),
     );
 }
 

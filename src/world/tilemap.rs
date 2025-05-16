@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use crate::{AppSet, screens::Screen};
+use crate::{AppSystems, screens::Screen};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         OnEnter(Screen::Gameplay),
-        spawn_tile_map.in_set(AppSet::PreUpdate),
+        spawn_tile_map.in_set(AppSystems::PreUpdate),
     );
 }
 

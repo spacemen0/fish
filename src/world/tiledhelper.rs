@@ -29,7 +29,7 @@ use bevy::{
 use bevy_ecs_tilemap::prelude::*;
 use thiserror::Error;
 
-use crate::AppSet;
+use crate::AppSystems;
 use crate::constants::TILE_SCALE;
 use crate::game::camera::CursorPos;
 
@@ -49,7 +49,7 @@ impl Plugin for TiledPlugin {
                         .run_if(on_event::<MouseButtonInput>),
                 )
                     .chain()
-                    .in_set(AppSet::PreUpdate),
+                    .in_set(AppSystems::PreUpdate),
             );
     }
 }

@@ -3,7 +3,7 @@ use rand::prelude::*;
 use std::time::Duration;
 
 use crate::{
-    AppSet,
+    AppSystems,
     audio::sound_effect,
     game::{movement::MovementController, player::PlayerAssets},
 };
@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            update_animation_timer.in_set(AppSet::TickTimers),
+            update_animation_timer.in_set(AppSystems::TickTimers),
             (
                 update_player_actions,
                 update_animation_movement,
@@ -23,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
             )
                 .chain()
                 .run_if(resource_exists::<PlayerAssets>)
-                .in_set(AppSet::Update),
+                .in_set(AppSystems::Update),
         ),
     );
 }
@@ -212,6 +212,7 @@ fn update_animation_movement(
         };
 
         if animation.state != animation_state {
+            animation.set_state_changed(true);
             animation.update_state(animation_state);
         }
     }
@@ -253,8 +254,8 @@ fn trigger_step_sound_effect(
                 .expect("Player assets should exist!")
                 .clone();
             commands.spawn(sound_effect(random_step));
-            animation.set_state_changed(false);
         }
+        animation.set_state_changed(false);
     }
 }
 
@@ -355,6 +356,20 @@ impl PlayerAnimationState {
                     Vec2::new(0.2, 0.0)
                 } else {
                     Vec2::new(-0.2, 0.0)
+                }
+            }
+            PlayerAnimationState::ChoppingT => {
+                if frame == 1 {
+                    Vec2::new(-0.1, 0.0)
+                } else {
+                    Vec2::ZERO
+                }
+            }
+            PlayerAnimationState::ChoppingB => {
+                if frame == 1 {
+                    Vec2::ZERO
+                } else {
+                    Vec2::new(0.1, 0.0)
                 }
             }
             _ => Vec2::ZERO,

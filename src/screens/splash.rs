@@ -6,7 +6,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{AppSet, screens::Screen, theme::prelude::*};
+use crate::{AppSystems, screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     // Spawn splash screen.
@@ -17,8 +17,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            tick_fade_in_out.in_set(AppSet::TickTimers),
-            apply_fade_in_out.in_set(AppSet::Update),
+            tick_fade_in_out.in_set(AppSystems::TickTimers),
+            apply_fade_in_out.in_set(AppSystems::Update),
         )
             .run_if(in_state(Screen::Splash)),
     );
@@ -30,8 +30,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            tick_splash_timer.in_set(AppSet::TickTimers),
-            check_splash_timer.in_set(AppSet::Update),
+            tick_splash_timer.in_set(AppSystems::TickTimers),
+            check_splash_timer.in_set(AppSystems::Update),
         )
             .run_if(in_state(Screen::Splash)),
     );
@@ -45,8 +45,8 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 const SPLASH_BACKGROUND_COLOR: Color = Color::srgb(0.157, 0.157, 0.157);
-const SPLASH_DURATION_SECS: f32 = 1.8;
-const SPLASH_FADE_DURATION_SECS: f32 = 0.6;
+const SPLASH_DURATION_SECS: f32 = 1.0;
+const SPLASH_FADE_DURATION_SECS: f32 = 0.3;
 
 fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
