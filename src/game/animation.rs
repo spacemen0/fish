@@ -6,6 +6,7 @@ use crate::{
     AppSystems,
     audio::sound_effect,
     game::{movement::MovementController, player::PlayerAssets},
+    screens::Screen,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -16,13 +17,13 @@ pub(super) fn plugin(app: &mut App) {
         (
             update_animation_timer.in_set(AppSystems::TickTimers),
             (
-                update_player_actions,
+                update_animation_actions,
                 update_animation_movement,
                 update_animation_atlas,
                 trigger_step_sound_effect,
             )
                 .chain()
-                .run_if(resource_exists::<PlayerAssets>)
+                .run_if(resource_exists::<PlayerAssets>.and(in_state(Screen::Gameplay)))
                 .in_set(AppSystems::Update),
         ),
     );
@@ -91,83 +92,46 @@ impl PlayerAnimationState {
     }
 }
 
-fn update_player_actions(
+fn update_animation_actions(
     time: Res<Time>,
-    input: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(
-        &mut PlayerAnimation,
-        &mut PlayerActionState,
-        &MovementController,
-    )>,
+    mut player_query: Query<(&mut PlayerAnimation, &mut PlayerActionState)>,
 ) {
-    for (mut animation, mut action_state, controller) in &mut player_query {
-        // Get current direction from animation state
-        let direction = animation.state.get_direction();
+    let (mut animation, mut action_state) =
+        player_query.single_mut().expect("Player should exist!");
+    let direction = animation.state.get_direction();
 
-        // Check for new action triggers
-        if action_state.current_action.is_none() {
-            // Only allow starting actions when not moving
-            if controller.intent == Vec2::ZERO {
-                if input.just_pressed(KeyCode::KeyE) {
-                    // Start watering action
-                    action_state.current_action = Some(ActionType::Watering);
-                    action_state.action_progress = 0.0;
+    if action_state.current_action.is_none() {
+        return;
+    }
+    let new_state = PlayerAnimationState::from_action_and_direction(
+        action_state.current_action.unwrap(),
+        direction,
+    );
+    if animation.state != new_state {
+        animation.update_state(new_state);
+        animation.set_state_changed(true);
+    } else {
+        action_state.action_progress += time.delta_secs();
 
-                    // Set animation state based on current direction
-                    let new_state = PlayerAnimationState::from_action_and_direction(
-                        action_state.current_action.unwrap(),
-                        direction,
-                    );
-                    animation.update_state(new_state);
-                } else if input.just_pressed(KeyCode::KeyQ) {
-                    // Start chopping action
-                    action_state.current_action = Some(ActionType::Hoeing);
-                    action_state.action_progress = 0.0;
+        // Check if action is complete (adjust times based on your animations)
+        let action_duration = match action_state.current_action {
+            Some(ActionType::Watering) => 2.0 * PlayerAnimation::WATERING_DURATION, // seconds
+            Some(ActionType::Hoeing) => 2.0 * PlayerAnimation::HOEING_DURATION,     // seconds
+            Some(ActionType::Chopping) => 2.0 * PlayerAnimation::CHOPPING_DURATION, // seconds
+            _ => 0.0,
+        };
+        if action_state.action_progress >= action_duration {
+            // Action complete, return to idle state
+            action_state.current_action = None;
 
-                    // Set animation state based on current direction
-                    let new_state = PlayerAnimationState::from_action_and_direction(
-                        action_state.current_action.unwrap(),
-                        direction,
-                    );
-                    animation.update_state(new_state);
-                } else if input.just_pressed(KeyCode::KeyF) {
-                    // Start hoeing action
-                    action_state.current_action = Some(ActionType::Chopping);
-                    action_state.action_progress = 0.0;
-
-                    // Set animation state based on current direction
-                    let new_state = PlayerAnimationState::from_action_and_direction(
-                        action_state.current_action.unwrap(),
-                        direction,
-                    );
-                    animation.update_state(new_state);
-                }
-            }
-        } else {
-            // Update existing action
-            action_state.action_progress += time.delta_secs();
-
-            // Check if action is complete (adjust times based on your animations)
-            let action_duration = match action_state.current_action {
-                Some(ActionType::Watering) => 0.6, // seconds
-                Some(ActionType::Hoeing) => 0.6,   // seconds
-                Some(ActionType::Chopping) => 0.6, // seconds
-                _ => 0.0,
+            // Return to idle state based on current direction
+            let new_state = match direction {
+                Direction::Top => PlayerAnimationState::IdlingT,
+                Direction::Bottom => PlayerAnimationState::IdlingB,
+                Direction::Left => PlayerAnimationState::IdlingL,
+                Direction::Right => PlayerAnimationState::IdlingR,
             };
-
-            if action_state.action_progress >= action_duration {
-                // Action complete, return to idle state
-                action_state.current_action = None;
-
-                // Return to idle state based on current direction
-                let new_state = match direction {
-                    Direction::Top => PlayerAnimationState::IdlingT,
-                    Direction::Bottom => PlayerAnimationState::IdlingB,
-                    Direction::Left => PlayerAnimationState::IdlingL,
-                    Direction::Right => PlayerAnimationState::IdlingR,
-                };
-                animation.update_state(new_state);
-            }
+            animation.update_state(new_state);
         }
     }
 }
@@ -378,11 +342,11 @@ impl PlayerAnimationState {
 }
 
 impl PlayerAnimation {
+    const WATERING_DURATION: f32 = 0.3;
+    const HOEING_DURATION: f32 = 0.3;
+    const CHOPPING_DURATION: f32 = 0.3;
     const IDLE_INTERVAL: Duration = Duration::from_millis(500);
     const WALKING_INTERVAL: Duration = Duration::from_millis(150);
-    const HOEING_INTERVAL: Duration = Duration::from_millis(300);
-    const WATERING_INTERVAL: Duration = Duration::from_millis(300);
-    const CHOPPING_INTERVAL: Duration = Duration::from_millis(300);
     const WALKING_FRAMES: usize = 2;
     const HOEING_FRAMES: usize = 2;
     const WATERING_FRAMES: usize = 2;
@@ -466,48 +430,76 @@ impl PlayerAnimation {
                         Self::internal_new(Self::WALKING_INTERVAL, PlayerAnimationState::WalkingR)
                 }
                 PlayerAnimationState::HoeingT => {
-                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingT)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::HOEING_DURATION),
+                        PlayerAnimationState::HoeingT,
+                    )
                 }
                 PlayerAnimationState::HoeingB => {
-                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingB)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::HOEING_DURATION),
+                        PlayerAnimationState::HoeingB,
+                    )
                 }
                 PlayerAnimationState::HoeingL => {
-                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingL)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::HOEING_DURATION),
+                        PlayerAnimationState::HoeingL,
+                    )
                 }
                 PlayerAnimationState::HoeingR => {
-                    *self = Self::internal_new(Self::HOEING_INTERVAL, PlayerAnimationState::HoeingR)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::HOEING_DURATION),
+                        PlayerAnimationState::HoeingR,
+                    )
                 }
                 PlayerAnimationState::WateringT => {
-                    *self =
-                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringT)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::WATERING_DURATION),
+                        PlayerAnimationState::WateringT,
+                    )
                 }
                 PlayerAnimationState::WateringB => {
-                    *self =
-                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringB)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::WATERING_DURATION),
+                        PlayerAnimationState::WateringB,
+                    )
                 }
                 PlayerAnimationState::WateringL => {
-                    *self =
-                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringL)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::WATERING_DURATION),
+                        PlayerAnimationState::WateringL,
+                    )
                 }
                 PlayerAnimationState::WateringR => {
-                    *self =
-                        Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringR)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::WATERING_DURATION),
+                        PlayerAnimationState::WateringR,
+                    )
                 }
                 PlayerAnimationState::ChoppingT => {
-                    *self =
-                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingT)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::CHOPPING_DURATION),
+                        PlayerAnimationState::ChoppingT,
+                    )
                 }
                 PlayerAnimationState::ChoppingB => {
-                    *self =
-                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingB)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::CHOPPING_DURATION),
+                        PlayerAnimationState::ChoppingB,
+                    )
                 }
                 PlayerAnimationState::ChoppingL => {
-                    *self =
-                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingL)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::CHOPPING_DURATION),
+                        PlayerAnimationState::ChoppingL,
+                    )
                 }
                 PlayerAnimationState::ChoppingR => {
-                    *self =
-                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingR)
+                    *self = Self::internal_new(
+                        Duration::from_secs_f32(Self::CHOPPING_DURATION),
+                        PlayerAnimationState::ChoppingR,
+                    )
                 }
             }
         }

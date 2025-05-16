@@ -10,11 +10,15 @@ use crate::{
     asset_tracking::LoadResource,
     constants::{GRID_SIZE_X, GRID_SIZE_Y},
     game::{animation::PlayerAnimation, movement::MovementController},
+    screens::Screen,
 };
 
 use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_Z};
 
-use super::{animation::PlayerActionState, camera::WithinBounds};
+use super::{
+    animation::{ActionType, PlayerActionState},
+    camera::WithinBounds,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -25,7 +29,10 @@ pub(super) fn plugin(app: &mut App) {
     // Record directional input as movement controls.
     app.add_systems(
         Update,
-        record_player_directional_input.in_set(AppSystems::RecordInput),
+        (record_player_directional_input, record_player_actions_input)
+            .chain()
+            .run_if(in_state(Screen::Gameplay))
+            .in_set(AppSystems::RecordInput),
     );
 }
 
@@ -87,13 +94,33 @@ fn record_player_directional_input(
         intent.x += 1.0;
     }
 
-    // Normalize intent so that diagonal movement is the same speed as horizontal / vertical.
-    // This should be omitted if the input comes from an analog stick instead.
     let intent = intent.normalize_or_zero();
 
-    // Apply movement intent to controllers.
     for mut controller in &mut controller_query {
         controller.intent = intent;
+    }
+}
+
+fn record_player_actions_input(
+    input: Res<ButtonInput<KeyCode>>,
+    mut player_query: Query<(&mut PlayerActionState, &MovementController)>,
+) {
+    let (mut action_state, controller) = player_query.single_mut().expect("Player should exist!");
+
+    if action_state.current_action.is_none() {
+        // Only allow starting actions when not moving
+        if controller.intent == Vec2::ZERO {
+            if input.just_pressed(KeyCode::KeyE) {
+                action_state.current_action = Some(ActionType::Watering);
+                action_state.action_progress = 0.0;
+            } else if input.just_pressed(KeyCode::KeyQ) {
+                action_state.current_action = Some(ActionType::Hoeing);
+                action_state.action_progress = 0.0;
+            } else if input.just_pressed(KeyCode::KeyF) {
+                action_state.current_action = Some(ActionType::Chopping);
+                action_state.action_progress = 0.0;
+            }
+        }
     }
 }
 
