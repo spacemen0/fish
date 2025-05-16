@@ -50,17 +50,25 @@ pub enum ActionType {
     Walking,
     Hoeing,
     Watering,
-    // Add more actions in the future
+    Chopping,
 }
 
 impl PlayerAnimationState {
     // Get the direction component of this state
     pub fn get_direction(&self) -> Direction {
         match self {
-            Self::IdlingT | Self::WalkingT | Self::HoeingT | Self::WateringT => Direction::Top,
-            Self::IdlingB | Self::WalkingB | Self::HoeingB | Self::WateringB => Direction::Bottom,
-            Self::IdlingL | Self::WalkingL | Self::HoeingL | Self::WateringL => Direction::Left,
-            Self::IdlingR | Self::WalkingR | Self::HoeingR | Self::WateringR => Direction::Right,
+            Self::IdlingT | Self::WalkingT | Self::HoeingT | Self::WateringT | Self::ChoppingT => {
+                Direction::Top
+            }
+            Self::IdlingB | Self::WalkingB | Self::HoeingB | Self::WateringB | Self::ChoppingB => {
+                Direction::Bottom
+            }
+            Self::IdlingL | Self::WalkingL | Self::HoeingL | Self::WateringL | Self::ChoppingL => {
+                Direction::Left
+            }
+            Self::IdlingR | Self::WalkingR | Self::HoeingR | Self::WateringR | Self::ChoppingR => {
+                Direction::Right
+            }
         }
     }
 
@@ -74,6 +82,9 @@ impl PlayerAnimationState {
             Self::HoeingT | Self::HoeingB | Self::HoeingL | Self::HoeingR => ActionType::Hoeing,
             Self::WateringT | Self::WateringB | Self::WateringL | Self::WateringR => {
                 ActionType::Watering
+            }
+            Self::ChoppingT | Self::ChoppingB | Self::ChoppingL | Self::ChoppingR => {
+                ActionType::Chopping
             }
         }
     }
@@ -100,6 +111,11 @@ impl PlayerAnimationState {
             (ActionType::Watering, Direction::Bottom) => Self::WateringB,
             (ActionType::Watering, Direction::Left) => Self::WateringL,
             (ActionType::Watering, Direction::Right) => Self::WateringR,
+
+            (ActionType::Chopping, Direction::Top) => Self::ChoppingT,
+            (ActionType::Chopping, Direction::Bottom) => Self::ChoppingB,
+            (ActionType::Chopping, Direction::Left) => Self::ChoppingL,
+            (ActionType::Chopping, Direction::Right) => Self::ChoppingR,
         }
     }
 }
@@ -147,6 +163,19 @@ fn update_player_actions(
                         Direction::Right => PlayerAnimationState::HoeingR,
                     };
                     animation.update_state(new_state);
+                } else if input.just_pressed(KeyCode::KeyF) {
+                    // Start hoeing action
+                    action_state.current_action = Some(ActionType::Chopping);
+                    action_state.action_progress = 0.0;
+
+                    // Set animation state based on current direction
+                    let new_state = match direction {
+                        Direction::Top => PlayerAnimationState::ChoppingT,
+                        Direction::Bottom => PlayerAnimationState::ChoppingB,
+                        Direction::Left => PlayerAnimationState::ChoppingL,
+                        Direction::Right => PlayerAnimationState::ChoppingR,
+                    };
+                    animation.update_state(new_state);
                 }
             }
         } else {
@@ -157,6 +186,7 @@ fn update_player_actions(
             let action_duration = match action_state.current_action {
                 Some(ActionType::Watering) => 0.6, // seconds
                 Some(ActionType::Hoeing) => 0.6,   // seconds
+                Some(ActionType::Chopping) => 0.6, // seconds
                 _ => 0.0,
             };
 
@@ -186,6 +216,7 @@ fn update_animation_movement(
     )>,
 ) {
     for (controller, mut animation, state) in &mut player_query {
+        // If the player is performing an action, skip movement animation
         if state.current_action.is_some() {
             continue;
         }
@@ -209,12 +240,10 @@ fn update_animation_movement(
                 } else {
                     Direction::Bottom
                 }
+            } else if intent.x > 0.0 {
+                Direction::Right
             } else {
-                if intent.x > 0.0 {
-                    Direction::Right
-                } else {
-                    Direction::Left
-                }
+                Direction::Left
             };
             (direction, ActionType::Walking)
         };
@@ -299,6 +328,10 @@ pub enum PlayerAnimationState {
     WateringB,
     WateringL,
     WateringR,
+    ChoppingT,
+    ChoppingB,
+    ChoppingL,
+    ChoppingR,
 }
 
 impl PlayerAnimationState {
@@ -325,51 +358,63 @@ impl PlayerAnimationState {
         match self {
             PlayerAnimationState::HoeingL => {
                 if frame == 1 {
-                    Vec2::new(0.7, 0.5)
+                    Vec2::new(0.2, 0.0)
                 } else {
-                    Vec2::new(0.5, 0.5)
+                    Vec2::ZERO
                 }
             }
             PlayerAnimationState::HoeingR => {
                 if frame == 1 {
-                    Vec2::new(0.3, 0.5)
+                    Vec2::new(-0.2, 0.0)
                 } else {
-                    Vec2::new(0.5, 0.5)
+                    Vec2::ZERO
                 }
             }
             PlayerAnimationState::WateringR => {
                 if frame == 1 {
-                    Vec2::new(0.3, 0.5)
+                    Vec2::new(-0.2, 0.0)
                 } else {
-                    Vec2::new(0.25, 0.5)
+                    Vec2::new(-0.25, 0.0)
                 }
             }
             PlayerAnimationState::WateringL => {
                 if frame == 1 {
-                    Vec2::new(0.8, 0.5)
+                    Vec2::new(0.3, 0.0)
                 } else {
-                    Vec2::new(0.75, 0.5)
+                    Vec2::new(0.25, 0.0)
                 }
             }
-            _ => Vec2::new(0.5, 0.5),
+            PlayerAnimationState::ChoppingR => {
+                if frame == 1 {
+                    Vec2::new(-0.2, 0.0)
+                } else {
+                    Vec2::new(0.2, 0.0)
+                }
+            }
+            PlayerAnimationState::ChoppingL => {
+                if frame == 1 {
+                    Vec2::new(0.2, 0.0)
+                } else {
+                    Vec2::new(-0.2, 0.0)
+                }
+            }
+            _ => Vec2::ZERO,
         }
     }
 }
 
 impl PlayerAnimation {
-    /// The number of idle frames.
-    const IDLE_FRAMES: usize = 2;
-    /// The duration of each idle frame.
     const IDLE_INTERVAL: Duration = Duration::from_millis(500);
-    /// The number of walking frames.
-    const WALKING_FRAMES: usize = 2;
-
-    const HOEING_FRAMES: usize = 2;
-    const WATERING_FRAMES: usize = 2;
-    /// The duration of each walking frame.
     const WALKING_INTERVAL: Duration = Duration::from_millis(150);
     const HOEING_INTERVAL: Duration = Duration::from_millis(300);
     const WATERING_INTERVAL: Duration = Duration::from_millis(300);
+    const CHOPPING_INTERVAL: Duration = Duration::from_millis(300);
+    const WALKING_FRAMES: usize = 2;
+    const HOEING_FRAMES: usize = 2;
+    const WATERING_FRAMES: usize = 2;
+    const IDLE_FRAMES: usize = 2;
+    const CHOPPING_FRAMES: usize = 2;
+
     fn internal_new(duration: Duration, state: PlayerAnimationState) -> Self {
         Self {
             timer: Timer::new(duration, TimerMode::Repeating),
@@ -407,6 +452,10 @@ impl PlayerAnimation {
                 PlayerAnimationState::WateringL => Self::WATERING_FRAMES,
                 PlayerAnimationState::WateringR => Self::WATERING_FRAMES,
                 PlayerAnimationState::WateringB => Self::WATERING_FRAMES,
+                PlayerAnimationState::ChoppingT => Self::CHOPPING_FRAMES,
+                PlayerAnimationState::ChoppingB => Self::CHOPPING_FRAMES,
+                PlayerAnimationState::ChoppingL => Self::CHOPPING_FRAMES,
+                PlayerAnimationState::ChoppingR => Self::CHOPPING_FRAMES,
             };
     }
 
@@ -470,6 +519,22 @@ impl PlayerAnimation {
                     *self =
                         Self::internal_new(Self::WATERING_INTERVAL, PlayerAnimationState::WateringR)
                 }
+                PlayerAnimationState::ChoppingT => {
+                    *self =
+                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingT)
+                }
+                PlayerAnimationState::ChoppingB => {
+                    *self =
+                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingB)
+                }
+                PlayerAnimationState::ChoppingL => {
+                    *self =
+                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingL)
+                }
+                PlayerAnimationState::ChoppingR => {
+                    *self =
+                        Self::internal_new(Self::CHOPPING_INTERVAL, PlayerAnimationState::ChoppingR)
+                }
             }
         }
     }
@@ -507,6 +572,10 @@ impl PlayerAnimation {
             PlayerAnimationState::WateringB => 8 + self.frame,
             PlayerAnimationState::WateringL => 40 + self.frame,
             PlayerAnimationState::WateringR => 56 + self.frame,
+            PlayerAnimationState::ChoppingT => 22 + self.frame,
+            PlayerAnimationState::ChoppingB => 6 + self.frame,
+            PlayerAnimationState::ChoppingL => 38 + self.frame,
+            PlayerAnimationState::ChoppingR => 54 + self.frame,
         }
     }
 }
