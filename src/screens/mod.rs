@@ -3,15 +3,18 @@
 mod credits;
 mod gameplay;
 mod loading;
+mod pause;
 mod settings;
 mod splash;
 mod title;
 
 use bevy::prelude::*;
 
+use crate::states::GameState;
+
 pub(super) fn plugin(app: &mut App) {
-    app.init_state::<Screen>();
-    app.enable_state_scoped_entities::<Screen>();
+    app.init_state::<GameState>();
+    app.enable_state_scoped_entities::<GameState>();
 
     app.add_plugins((
         credits::plugin,
@@ -20,17 +23,6 @@ pub(super) fn plugin(app: &mut App) {
         settings::plugin,
         splash::plugin,
         title::plugin,
+        pause::plugin,
     ));
-}
-
-/// The game's main screen states.
-#[derive(States, Debug, Hash, PartialEq, Eq, Clone, Default)]
-pub enum Screen {
-    #[default]
-    Splash,
-    Title,
-    Credits,
-    Settings,
-    Loading,
-    Gameplay,
 }

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     game::player::{PlayerAssets, player},
-    screens::Screen,
+    states::{DestroyOnEnter, GameState, VisibleInState},
 };
 
 /// A system that spawns the main level.
@@ -17,7 +17,8 @@ pub fn spawn_level(
         Name::new("Level"),
         Transform::default(),
         Visibility::default(),
-        StateScoped(Screen::Gameplay),
+        VisibleInState(vec![GameState::Gameplay]),
+        DestroyOnEnter(vec![GameState::Title]),
         children![player(&player_assets, &mut texture_atlas_layouts)],
     ));
 }

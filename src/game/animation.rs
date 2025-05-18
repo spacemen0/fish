@@ -6,7 +6,7 @@ use crate::{
     AppSystems,
     audio::sound_effect,
     game::{movement::MovementController, player::PlayerAssets},
-    screens::Screen,
+    states::GameState,
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -23,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
                 trigger_step_sound_effect,
             )
                 .chain()
-                .run_if(resource_exists::<PlayerAssets>.and(in_state(Screen::Gameplay)))
+                .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay)))
                 .in_set(AppSystems::Update),
         ),
     );

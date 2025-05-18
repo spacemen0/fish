@@ -2,21 +2,26 @@
 
 use bevy::{ecs::spawn::SpawnIter, prelude::*, ui::Val::*};
 
-use crate::{asset_tracking::LoadResource, audio::music, screens::Screen, theme::prelude::*};
+use crate::{
+    asset_tracking::LoadResource,
+    audio::music,
+    states::{GameState, PreviousState},
+    theme::prelude::*,
+};
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Credits), spawn_credits_screen);
+    app.add_systems(OnEnter(GameState::Credits), spawn_credits_screen);
 
     app.register_type::<CreditsMusic>();
     app.load_resource::<CreditsMusic>();
-    app.add_systems(OnEnter(Screen::Credits), start_credits_music);
-    app.add_systems(OnExit(Screen::Credits), stop_credits_music);
+    app.add_systems(OnEnter(GameState::Credits), start_credits_music);
+    app.add_systems(OnExit(GameState::Credits), stop_credits_music);
 }
 
 fn spawn_credits_screen(mut commands: Commands) {
     commands.spawn((
         widget::ui_root("Credits Screen"),
-        StateScoped(Screen::Credits),
+        StateScoped(GameState::Credits),
         children![
             widget::header("Created by"),
             created_by(),
@@ -74,8 +79,13 @@ fn grid(content: Vec<[&'static str; 2]>) -> impl Bundle {
     )
 }
 
-fn enter_title_screen(_: Trigger<Pointer<Click>>, mut next_screen: ResMut<NextState<Screen>>) {
-    next_screen.set(Screen::Title);
+fn enter_title_screen(
+    _: Trigger<Pointer<Click>>,
+    mut next_screen: ResMut<NextState<GameState>>,
+    mut previous_state: ResMut<PreviousState>,
+) {
+    previous_state.0 = GameState::Credits;
+    next_screen.set(GameState::Title);
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]

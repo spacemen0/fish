@@ -3,21 +3,32 @@
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
 use crate::{
-    asset_tracking::LoadResource, audio::music, game::level::spawn_level, screens::Screen,
+    asset_tracking::LoadResource,
+    audio::music,
+    game::level::spawn_level,
+    states::{GameState, PreviousState},
 };
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
+    app.add_systems(
+        OnTransition::<GameState> {
+            exited: GameState::Title,
+            entered: GameState::Gameplay,
+        },
+        spawn_level,
+    );
 
     app.register_type::<GameplayMusic>();
     app.load_resource::<GameplayMusic>();
-    app.add_systems(OnEnter(Screen::Gameplay), start_gameplay_music);
-    app.add_systems(OnExit(Screen::Gameplay), stop_gameplay_music);
+    app.add_systems(OnEnter(GameState::Gameplay), start_gameplay_music);
+    app.add_systems(OnExit(GameState::Gameplay), stop_gameplay_music);
 
     app.add_systems(
         Update,
-        return_to_title_screen
-            .run_if(in_state(Screen::Gameplay).and(input_just_pressed(KeyCode::Escape))),
+        pause_or_continue_gameplay.run_if(
+            (in_state(GameState::Gameplay).or(in_state(GameState::Pausing)))
+                .and(input_just_pressed(KeyCode::Escape)),
+        ),
     );
 }
 
@@ -50,6 +61,15 @@ fn stop_gameplay_music(mut commands: Commands, mut gameplay_music: ResMut<Gamepl
     }
 }
 
-fn return_to_title_screen(mut next_screen: ResMut<NextState<Screen>>) {
-    next_screen.set(Screen::Title);
+fn pause_or_continue_gameplay(
+    current_screen: Res<State<GameState>>,
+    mut next_screen: ResMut<NextState<GameState>>,
+    mut previous_state: ResMut<PreviousState>,
+) {
+    previous_state.0 = current_screen.get().clone();
+    if current_screen.get() == &GameState::Pausing {
+        next_screen.set(GameState::Gameplay);
+        return;
+    }
+    next_screen.set(GameState::Pausing);
 }

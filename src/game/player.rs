@@ -10,7 +10,7 @@ use crate::{
     asset_tracking::LoadResource,
     constants::{GRID_SIZE_X, GRID_SIZE_Y},
     game::{animation::PlayerAnimation, movement::MovementController},
-    screens::Screen,
+    states::GameState,
 };
 
 use crate::constants::{PLAYER_MAX_SPEED, PLAYER_SCALE, PLAYER_Z};
@@ -31,7 +31,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         (record_player_directional_input, record_player_actions_input)
             .chain()
-            .run_if(in_state(Screen::Gameplay))
+            .run_if(in_state(GameState::Gameplay))
             .in_set(AppSystems::RecordInput),
     );
 }

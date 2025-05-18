@@ -15,15 +15,14 @@
 
 use bevy::prelude::*;
 
-use crate::AppSystems;
-use crate::screens::Screen;
+use crate::{AppSystems, states::GameState};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
     app.add_systems(
         Update,
         (apply_movement,)
-            .run_if(in_state(Screen::Gameplay))
+            .run_if(in_state(GameState::Gameplay))
             .in_set(AppSystems::Update),
     );
 }

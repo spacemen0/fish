@@ -32,6 +32,7 @@ use thiserror::Error;
 use crate::AppSystems;
 use crate::constants::TILE_SCALE;
 use crate::game::camera::CursorPos;
+use crate::states::{DestroyOnEnter, GameState, VisibleInState};
 
 #[derive(Default)]
 pub struct TiledPlugin;
@@ -46,7 +47,7 @@ impl Plugin for TiledPlugin {
                 (
                     process_loaded_maps,
                     (handle_mouse_highlight, apply_highlight_effect)
-                        .run_if(on_event::<MouseButtonInput>),
+                        .run_if(on_event::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
                 )
                     .chain()
                     .in_set(AppSystems::PreUpdate),
@@ -400,11 +401,11 @@ pub fn process_loaded_maps(
                                             },
                                             ..Default::default()
                                         },
-                                        // Add the tile properties component
                                         Name::new(format!(
                                             "Tile ({}, {}, {})",
                                             tile_pos.x, tile_pos.y, layer_index
                                         )),
+                                        DestroyOnEnter(vec![GameState::Title]),
                                     ))
                                     .id();
                                 if tile_properties.get("type").is_none() {
@@ -432,21 +433,29 @@ pub fn process_loaded_maps(
                             }
                         }
 
-                        commands.entity(layer_entity).insert(TilemapBundle {
-                            grid_size,
-                            size: map_size,
-                            storage: tile_storage,
-                            texture: tilemap_texture.clone(),
-                            tile_size,
-                            spacing: tile_spacing,
-                            anchor: TilemapAnchor::Center,
-                            transform: Transform::from_xyz(offset_x, -offset_y, layer_index as f32)
+                        commands.entity(layer_entity).insert((
+                            TilemapBundle {
+                                grid_size,
+                                size: map_size,
+                                storage: tile_storage,
+                                texture: tilemap_texture.clone(),
+                                tile_size,
+                                spacing: tile_spacing,
+                                anchor: TilemapAnchor::Center,
+                                transform: Transform::from_xyz(
+                                    offset_x,
+                                    -offset_y,
+                                    layer_index as f32,
+                                )
                                 .with_scale(Vec2::splat(TILE_SCALE).extend(1.0)),
-                            map_type,
-                            render_settings: *render_settings,
+                                map_type,
+                                render_settings: *render_settings,
 
-                            ..Default::default()
-                        });
+                                ..Default::default()
+                            },
+                            DestroyOnEnter(vec![GameState::Title]),
+                            VisibleInState(vec![GameState::Gameplay]),
+                        ));
 
                         layer_storage
                             .storage

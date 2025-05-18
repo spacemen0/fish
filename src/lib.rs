@@ -5,6 +5,7 @@ mod constants;
 mod dev_tools;
 mod game;
 mod screens;
+mod states;
 mod theme;
 mod world;
 
@@ -69,6 +70,7 @@ impl Plugin for AppPlugin {
             screens::plugin,
             world::plugin,
             theme::plugin,
+            states::plugin,
         ));
     }
 }

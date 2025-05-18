@@ -1,12 +1,13 @@
 //! Development tools for the game. This plugin is only enabled in dev builds.
 
-use crate::screens::Screen;
 use bevy::{
     dev_tools::states::log_transitions, input::common_conditions::input_just_pressed, prelude::*,
     ui::UiDebugOptions,
 };
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
+use crate::states::GameState;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -18,7 +19,7 @@ pub(super) fn plugin(app: &mut App) {
     // app.add_plugins(DebugPickingPlugin)
     //     .insert_resource(DebugPickingMode::Normal);
     // Log `Screen` state transitions.
-    app.add_systems(Update, log_transitions::<Screen>);
+    app.add_systems(Update, log_transitions::<GameState>);
 
     // Toggle the debug overlay for UI.
     app.add_systems(

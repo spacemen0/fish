@@ -4,7 +4,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 
-use crate::{AppSystems, constants::*, screens::Screen};
+use crate::{AppSystems, constants::*, states::GameState};
 
 use super::player::Player;
 
@@ -13,7 +13,7 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<CameraBounds>();
     app.init_resource::<CursorPos>();
     app.add_event::<CameraScaleEvent>();
-    app.add_systems(OnEnter(Screen::Gameplay), calculate_camera_bounds);
+    app.add_systems(OnEnter(GameState::Gameplay), calculate_camera_bounds);
 
     app.add_systems(
         Update,
@@ -26,7 +26,7 @@ pub(super) fn plugin(app: &mut App) {
                 .run_if(on_event::<WindowResized>.or(on_event::<CameraScaleEvent>)),
         )
             .in_set(AppSystems::PostUpdate)
-            .run_if(in_state(Screen::Gameplay)),
+            .run_if(in_state(GameState::Gameplay)),
     );
 }
 
