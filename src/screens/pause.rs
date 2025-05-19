@@ -25,7 +25,6 @@ fn spawn_pausing_screen(mut commands: Commands) {
             widget::button("Continue", continue_to_gameplay_screen),
             widget::button("Settings", enter_settings_screen),
             widget::button("Title", enter_title_screen),
-            widget::button("Credits", enter_credits_screen),
         ],
     ));
 }
