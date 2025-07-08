@@ -211,7 +211,7 @@ fn trigger_step_sound_effect(
 ) {
     for mut animation in &mut step_query {
         if animation.state.is_walking() && animation.changed() {
-            let rng = &mut rand::thread_rng();
+            let rng = &mut rand::rng();
             let random_step = player_assets
                 .steps
                 .choose(rng)

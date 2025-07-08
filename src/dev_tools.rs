@@ -10,12 +10,7 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use crate::states::GameState;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((
-        EguiPlugin {
-            enable_multipass_for_primary_context: true,
-        },
-        WorldInspectorPlugin::new(),
-    ));
+    app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::new()));
     // app.add_plugins(DebugPickingPlugin)
     //     .insert_resource(DebugPickingMode::Normal);
     // Log `Screen` state transitions.
