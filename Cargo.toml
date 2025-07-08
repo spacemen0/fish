@@ -11,6 +11,7 @@ bevy = { version = "0.16.1", features = [
     "bevy_sprite",
 ] }
 rand = "0.9.1"
+getrandom = { version = "0.3", features = ["wasm_js"] }
 # Compile low-severity logs out of native builds for performance.
 log = { version = "0.4", features = [
     "max_level_debug",
