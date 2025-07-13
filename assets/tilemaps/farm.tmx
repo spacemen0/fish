@@ -14,6 +14,7 @@
   </tile>
   <tile id="2">
    <properties>
+    <property name="obstacle" type="bool" value="true"/>
     <property name="type" value="Grass"/>
    </properties>
   </tile>
@@ -780,6 +781,7 @@
   <image source="Water.png" width="64" height="16"/>
   <tile id="0">
    <properties>
+    <property name="obstacle" type="bool" value="true"/>
     <property name="type" value="Water"/>
    </properties>
   </tile>
@@ -839,7 +841,7 @@
 115,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,112,118
 </data>
  </layer>
- <layer id="2" name="Tile Layer 2" width="54" height="36">
+ <layer id="2" name="Tile Layer 2" width="54" height="36" visible="0">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,75,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

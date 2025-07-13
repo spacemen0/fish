@@ -64,6 +64,9 @@ pub enum TileType {
     Rock,
 }
 
+#[derive(Component, Debug, Clone, Copy, Reflect)]
+pub struct Obstacle;
+
 #[derive(Component)]
 struct HighlightedTile;
 
@@ -428,6 +431,9 @@ pub fn process_loaded_maps(
                                         }
                                     };
                                     commands.entity(tile_entity).insert(tile_type);
+                                }
+                                if tile_properties.get("obstacle").is_some() {
+                                    commands.entity(tile_entity).insert(Obstacle);
                                 }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }

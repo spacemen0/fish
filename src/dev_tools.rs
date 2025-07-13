@@ -11,8 +11,6 @@ use crate::states::GameState;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((EguiPlugin::default(), WorldInspectorPlugin::new()));
-    // app.add_plugins(DebugPickingPlugin)
-    //     .insert_resource(DebugPickingMode::Normal);
     // Log `Screen` state transitions.
     app.add_systems(Update, log_transitions::<GameState>);
 

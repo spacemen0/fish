@@ -101,7 +101,6 @@ impl FromWorld for EnemyAssets {
             enemies: assets.load_with_settings(
                 "images/enemies.png",
                 |settings: &mut ImageLoaderSettings| {
-                    // Use `nearest` image sampling to preserve pixel art style.
                     settings.sampler = ImageSampler::nearest();
                 },
             ),

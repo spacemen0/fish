@@ -7,6 +7,7 @@ mod game;
 mod screens;
 mod states;
 mod theme;
+mod utils;
 mod world;
 
 use bevy::{

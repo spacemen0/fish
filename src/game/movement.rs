@@ -14,8 +14,9 @@
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
 use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
 
-use crate::{AppSystems, states::GameState};
+use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
@@ -54,9 +55,39 @@ impl Default for MovementController {
 fn apply_movement(
     time: Res<Time>,
     mut movement_query: Query<(&MovementController, &mut Transform)>,
+    tilemap_q: Query<(
+        &TilemapSize,
+        &TilemapGridSize,
+        &TilemapTileSize,
+        &TilemapType,
+        &TileStorage,
+        &TilemapAnchor,
+    )>,
+    obstacle_q: Query<&Obstacle>,
 ) {
     for (controller, mut transform) in &mut movement_query {
         let velocity = controller.max_speed * controller.intent;
-        transform.translation += velocity.extend(0.0) * time.delta_secs();
+        let delta_movement = velocity.extend(0.0) * time.delta_secs();
+        let future_position = transform.translation + delta_movement;
+
+        for (map_size, grid_size, tile_size, map_type, tile_storage, anchor) in tilemap_q.iter() {
+            if let Some(future_tile_pos) = TilePos::from_world_pos(
+                &future_position.truncate(),
+                map_size,
+                grid_size,
+                tile_size,
+                map_type,
+                anchor,
+            ) {
+                if let Some(tile_entity) = tile_storage.get(&future_tile_pos) {
+                    if obstacle_q.get(tile_entity).is_ok() {
+                        return;
+                    }
+                }
+            }
+        }
+        if controller.intent.length_squared() > 0.0 {
+            transform.translation += delta_movement;
+        }
     }
 }
