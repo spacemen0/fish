@@ -14,7 +14,6 @@
   </tile>
   <tile id="2">
    <properties>
-    <property name="obstacle" type="bool" value="true"/>
     <property name="type" value="Grass"/>
    </properties>
   </tile>
