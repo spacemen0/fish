@@ -169,7 +169,8 @@ fn update_cursor_pos(
     let (cam_t, cam) = camera_q.single().expect("Camera should exist!");
     if let Ok(window) = q_window.single()
         && let Some(pos) = window.cursor_position()
-            && let Ok(pos) = cam.viewport_to_world_2d(cam_t, pos) {
-                *cursor_pos = CursorPos(pos);
-            }
+        && let Ok(pos) = cam.viewport_to_world_2d(cam_t, pos)
+    {
+        *cursor_pos = CursorPos(pos);
+    }
 }

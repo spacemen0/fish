@@ -10,8 +10,7 @@ bevy = { version = "0.16.1", features = [
     "bevy_sprite_picking_backend",
     "bevy_sprite",
 ] }
-getrandom = { version = "0.3.3", features = ["wasm_js"] }
-rand = "0.9.1"
+rand = "0.8"
 
 # Compile low-severity logs out of native builds for performance.
 log = { version = "0.4.27", features = [

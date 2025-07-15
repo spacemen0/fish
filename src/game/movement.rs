@@ -90,11 +90,11 @@ fn apply_movement(
                 tile_size,
                 map_type,
                 anchor,
-            )
-                && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
-                    && obstacle_q.get(tile_entity).is_ok() {
-                        return;
-                    }
+            ) && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
+                && obstacle_q.get(tile_entity).is_ok()
+            {
+                return;
+            }
         }
         if controller.intent.length_squared() > 0.0 {
             transform.translation += delta_movement;
