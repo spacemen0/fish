@@ -49,6 +49,8 @@ dev_native = [
     "bevy/embedded_watcher",
 ]
 
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
 
 [package.metadata.bevy_cli.release]
 # Disable dev features for release builds.
