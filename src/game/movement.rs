@@ -55,14 +55,18 @@ impl Default for MovementController {
 fn apply_movement(
     time: Res<Time>,
     mut movement_query: Query<(&MovementController, &mut Transform)>,
-    tilemap_q: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapTileSize,
-        &TilemapType,
-        &TileStorage,
-        &TilemapAnchor,
-    )>,
+    tilemap_q: Query<
+        (
+            &TilemapSize,
+            &TilemapGridSize,
+            &TilemapTileSize,
+            &TilemapType,
+            &TileStorage,
+            &Transform,
+            &TilemapAnchor,
+        ),
+        Without<MovementController>,
+    >,
     obstacle_q: Query<&Obstacle>,
 ) {
     for (controller, mut transform) in &mut movement_query {
@@ -70,9 +74,16 @@ fn apply_movement(
         let delta_movement = velocity.extend(0.0) * time.delta_secs();
         let future_position = transform.translation + delta_movement;
 
-        for (map_size, grid_size, tile_size, map_type, tile_storage, anchor) in tilemap_q.iter() {
+        for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
+            tilemap_q.iter()
+        {
+            let future_in_map_pos: Vec2 = {
+                let cursor_pos = Vec4::from((future_position, 1.0));
+                let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
+                cursor_in_map_pos.xy()
+            };
             if let Some(future_tile_pos) = TilePos::from_world_pos(
-                &future_position.truncate(),
+                &future_in_map_pos,
                 map_size,
                 grid_size,
                 tile_size,

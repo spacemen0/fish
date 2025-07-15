@@ -10,21 +10,22 @@ bevy = { version = "0.16.1", features = [
     "bevy_sprite_picking_backend",
     "bevy_sprite",
 ] }
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
 rand = "0.9.1"
-getrandom = { version = "0.3", features = ["wasm_js"] }
+
 # Compile low-severity logs out of native builds for performance.
-log = { version = "0.4", features = [
+log = { version = "0.4.27", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
 # Compile low-severity logs out of web builds for performance.
-tracing = { version = "0.1", features = [
+tracing = { version = "0.1.41", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
 fastrand = "2.3.0"
-bevy_egui = "0.35.0"
-bevy-inspector-egui = "0.31.0"
+bevy_egui = "0.35.1"
+bevy-inspector-egui = "0.32.0"
 bevy_ecs_tilemap = "0.16.0"
 thiserror = "2.0.12"
 tiled = "0.14.0"

@@ -1,5 +1,6 @@
 use crate::asset_tracking::LoadResource;
 use crate::constants::*;
+use crate::states::VisibleInState;
 use crate::{
     AppSystems,
     game::{camera::WithinBounds, movement::MovementController},
@@ -63,8 +64,9 @@ fn spawn_enemies(
     for i in 0..5 {
         let position = Vec2::new(100.0 * (i as f32 + 1.0), 100.0);
         commands.spawn((
-            Name::new(format!("Enemy {}", i)),
+            Name::new(format!("Enemy {i}")),
             enemy(&enemy_assets, &mut texture_atlas_layouts, &position),
+            VisibleInState(vec![GameState::Gameplay]),
         ));
     }
 }

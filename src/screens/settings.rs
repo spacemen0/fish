@@ -138,7 +138,7 @@ fn update_volume_label(
 ) {
     let factor = global_volume.volume.to_linear();
     let percent = (factor * 100.0).round();
-    let text = format!("{}%", percent);
+    let text = format!("{percent}%");
     label.0 = text;
 }
 
@@ -147,7 +147,7 @@ fn update_game_speed_label(
     time: Res<Time<Virtual>>,
 ) {
     let speed = time.relative_speed();
-    let text = format!("{:.1}x", speed);
+    let text = format!("{speed:.1}x");
     label.0 = text;
 }
 

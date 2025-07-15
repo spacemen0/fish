@@ -432,8 +432,10 @@ pub fn process_loaded_maps(
                                     };
                                     commands.entity(tile_entity).insert(tile_type);
                                 }
-                                if tile_properties.get("obstacle").is_some() {
-                                    commands.entity(tile_entity).insert(Obstacle);
+                                if let Some(is_obstacle) = tile_properties.get("obstacle") {
+                                    if is_obstacle == &tiled::PropertyValue::BoolValue(true) {
+                                        commands.entity(tile_entity).insert(Obstacle);
+                                    }
                                 }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }
@@ -529,7 +531,19 @@ fn handle_mouse_highlight(
             anchor,
         ) {
             if let Some(tile_entity) = tile_storage.get(&tile_pos) {
-                commands.entity(tile_entity).insert(HighlightedTile);
+                commands
+                    .entity(tile_entity)
+                    .insert(HighlightedTile)
+                    .insert((
+                        Text2d::new(format!("({},{})", tile_pos.x, tile_pos.y)),
+                        TextColor::WHITE,
+                        TextFont {
+                            font_size: 10.0,
+                            ..default()
+                        },
+                        Transform::from_translation(Vec3::new(cursor_pos.x, cursor_pos.y, 0.1)),
+                        VisibleInState(vec![GameState::Gameplay]),
+                    ));
             }
         }
     }
