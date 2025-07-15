@@ -5,7 +5,9 @@ use crate::{
     theme::widget,
 };
 
-use super::title::{enter_settings_screen, exit_app};
+use super::title::enter_settings_screen;
+#[cfg(not(target_family = "wasm"))]
+use super::title::exit_app;
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Pausing), spawn_pausing_screen);
 }
