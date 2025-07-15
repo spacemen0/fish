@@ -432,11 +432,10 @@ pub fn process_loaded_maps(
                                     };
                                     commands.entity(tile_entity).insert(tile_type);
                                 }
-                                if let Some(is_obstacle) = tile_properties.get("obstacle") {
-                                    if is_obstacle == &tiled::PropertyValue::BoolValue(true) {
+                                if let Some(is_obstacle) = tile_properties.get("obstacle")
+                                    && is_obstacle == &tiled::PropertyValue::BoolValue(true) {
                                         commands.entity(tile_entity).insert(Obstacle);
                                     }
-                                }
                                 tile_storage.set(&tile_pos, tile_entity);
                             }
                         }
@@ -529,8 +528,8 @@ fn handle_mouse_highlight(
             tile_size,
             map_type,
             anchor,
-        ) {
-            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
+        )
+            && let Some(tile_entity) = tile_storage.get(&tile_pos) {
                 commands
                     .entity(tile_entity)
                     .insert(HighlightedTile)
@@ -545,6 +544,5 @@ fn handle_mouse_highlight(
                         VisibleInState(vec![GameState::Gameplay]),
                     ));
             }
-        }
     }
 }

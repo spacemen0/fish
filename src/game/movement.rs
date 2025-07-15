@@ -13,7 +13,7 @@
 //! purposes. If you want to move the player in a smoother way,
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::primitives::Aabb};
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
@@ -54,7 +54,7 @@ impl Default for MovementController {
 
 fn apply_movement(
     time: Res<Time>,
-    mut movement_query: Query<(&MovementController, &mut Transform)>,
+    mut movement_query: Query<(&MovementController, &mut Transform, &Aabb)>,
     tilemap_q: Query<
         (
             &TilemapSize,
@@ -69,10 +69,11 @@ fn apply_movement(
     >,
     obstacle_q: Query<&Obstacle>,
 ) {
-    for (controller, mut transform) in &mut movement_query {
+    for (controller, mut transform, aabb) in &mut movement_query {
         let velocity = controller.max_speed * controller.intent;
         let delta_movement = velocity.extend(0.0) * time.delta_secs();
-        let future_position = transform.translation + delta_movement;
+        let future_position =
+            transform.translation + delta_movement + Vec3::from(aabb.half_extents);
 
         for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
             tilemap_q.iter()
@@ -89,13 +90,11 @@ fn apply_movement(
                 tile_size,
                 map_type,
                 anchor,
-            ) {
-                if let Some(tile_entity) = tile_storage.get(&future_tile_pos) {
-                    if obstacle_q.get(tile_entity).is_ok() {
+            )
+                && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
+                    && obstacle_q.get(tile_entity).is_ok() {
                         return;
                     }
-                }
-            }
         }
         if controller.intent.length_squared() > 0.0 {
             transform.translation += delta_movement;
