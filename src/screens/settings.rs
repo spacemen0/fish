@@ -22,7 +22,7 @@ pub(super) fn plugin(app: &mut App) {
 fn spawn_settings_screen(mut commands: Commands) {
     commands.spawn((
         widget::ui_root("Settings Screen"),
-        StateScoped(GameState::Settings),
+        DespawnOnExit(GameState::Settings),
         children![
             widget::header("Settings"),
             (

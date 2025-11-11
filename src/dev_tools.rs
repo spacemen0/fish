@@ -4,7 +4,6 @@ use bevy::{
     dev_tools::states::log_transitions,
     input::common_conditions::{input_just_pressed, input_toggle_active},
     prelude::*,
-    ui::UiDebugOptions,
 };
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;

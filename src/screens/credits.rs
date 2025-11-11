@@ -21,7 +21,7 @@ pub(super) fn plugin(app: &mut App) {
 fn spawn_credits_screen(mut commands: Commands) {
     commands.spawn((
         widget::ui_root("Credits Screen"),
-        StateScoped(GameState::Credits),
+        DespawnOnExit(GameState::Credits),
         children![
             widget::header("Created by"),
             created_by(),
@@ -80,7 +80,7 @@ fn grid(content: Vec<[&'static str; 2]>) -> impl Bundle {
 }
 
 fn enter_title_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     mut previous_state: ResMut<PreviousState>,
 ) {

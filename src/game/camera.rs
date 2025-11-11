@@ -12,18 +12,18 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<WithinBounds>();
     app.init_resource::<CameraBounds>();
     app.init_resource::<CursorPos>();
-    app.add_event::<CameraScaleEvent>();
+    app.add_message::<CameraScaleEvent>();
     app.add_systems(OnEnter(GameState::Gameplay), calculate_camera_bounds);
 
     app.add_systems(
         Update,
         (
-            camera_zoom.run_if(on_event::<MouseWheel>),
+            camera_zoom.run_if(on_message::<MouseWheel>),
             update_cursor_pos,
             apply_screen_wrap,
             camera_follow_player,
             calculate_camera_bounds
-                .run_if(on_event::<WindowResized>.or(on_event::<CameraScaleEvent>)),
+                .run_if(on_message::<WindowResized>.or(on_message::<CameraScaleEvent>)),
         )
             .in_set(AppSystems::PostUpdate)
             .run_if(in_state(GameState::Gameplay)),
@@ -58,7 +58,7 @@ pub struct CameraBounds {
     pub max: Vec2,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct CameraScaleEvent;
 
 impl FromWorld for CameraBounds {
@@ -123,8 +123,8 @@ fn camera_follow_player(
 }
 
 fn camera_zoom(
-    mut scroll_evr: EventReader<MouseWheel>,
-    mut ew: EventWriter<CameraScaleEvent>,
+    mut scroll_evr: MessageReader<MouseWheel>,
+    mut ew: MessageWriter<CameraScaleEvent>,
     mut query: Query<&mut Projection, With<Camera2d>>,
 ) {
     // Calculate the total scroll amount from all events

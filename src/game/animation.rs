@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor};
-use rand::prelude::*;
+use rand::{prelude::*, rng, thread_rng};
 use std::time::Duration;
 
 use crate::{
@@ -211,7 +211,7 @@ fn trigger_step_sound_effect(
 ) {
     for mut animation in &mut step_query {
         if animation.state.is_walking() && animation.changed() {
-            let rng = &mut thread_rng();
+            let rng = &mut rng();
             let random_step = player_assets
                 .steps
                 .choose(rng)

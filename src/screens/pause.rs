@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 fn spawn_pausing_screen(mut commands: Commands) {
     commands.spawn((
         widget::ui_root("Pausing Screen"),
-        StateScoped(GameState::Pausing),
+        DespawnOnExit(GameState::Pausing),
         #[cfg(not(target_family = "wasm"))]
         children![
             widget::button("Continue", continue_to_gameplay_screen),

@@ -519,7 +519,7 @@ fn handle_mouse_highlight(
         let cursor_pos: Vec2 = cursor_pos.0;
         let cursor_in_map_pos: Vec2 = {
             let cursor_pos = Vec4::from((cursor_pos, 0.0, 1.0));
-            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
+            let cursor_in_map_pos = map_transform.to_matrix().inverse() * cursor_pos;
             cursor_in_map_pos.xy()
         };
         if let Some(tile_pos) = TilePos::from_world_pos(
