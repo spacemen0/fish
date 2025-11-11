@@ -32,7 +32,7 @@ fn spawn_pausing_screen(mut commands: Commands) {
 }
 
 fn continue_to_gameplay_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     mut previous_state: ResMut<PreviousState>,
 ) {
@@ -41,7 +41,7 @@ fn continue_to_gameplay_screen(
 }
 
 fn enter_title_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     mut previous_state: ResMut<PreviousState>,
 ) {

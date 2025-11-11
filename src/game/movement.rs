@@ -79,9 +79,9 @@ fn apply_movement(
             tilemap_q.iter()
         {
             let future_in_map_pos: Vec2 = {
-                let cursor_pos = Vec4::from((future_position, 1.0));
-                let cursor_in_map_pos = map_transform.to_matrix().inverse() * cursor_pos;
-                cursor_in_map_pos.xy()
+                let future_pos = Vec4::from((future_position, 1.0));
+                let future_in_map_pos = map_transform.to_matrix().inverse() * future_pos;
+                future_in_map_pos.xy()
             };
             if let Some(future_tile_pos) = TilePos::from_world_pos(
                 &future_in_map_pos,
@@ -91,9 +91,11 @@ fn apply_movement(
                 map_type,
                 anchor,
             ) && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
-                && obstacle_q.get(tile_entity).is_ok()
             {
-                return;
+                if obstacle_q.get(tile_entity).is_ok() {
+                    println!("Collision detected at tile position: {:?}", future_tile_pos);
+                }
+                //return;
             }
         }
         if controller.intent.length_squared() > 0.0 {

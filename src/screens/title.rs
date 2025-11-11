@@ -33,7 +33,7 @@ fn spawn_title_screen(mut commands: Commands) {
 }
 
 fn enter_loading_or_gameplay_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     resource_handles: Res<ResourceHandles>,
     mut next_screen: ResMut<NextState<GameState>>,
 ) {
@@ -45,7 +45,7 @@ fn enter_loading_or_gameplay_screen(
 }
 
 pub fn enter_settings_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     current_state: Res<State<GameState>>,
     mut previous_state: ResMut<PreviousState>,
@@ -55,7 +55,7 @@ pub fn enter_settings_screen(
 }
 
 fn enter_credits_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     mut previous_state: ResMut<PreviousState>,
 ) {
@@ -63,6 +63,6 @@ fn enter_credits_screen(
     next_screen.set(GameState::Credits);
 }
 #[cfg(not(target_family = "wasm"))]
-pub fn exit_app(_: Trigger<Pointer<Click>>, mut app_exit: EventWriter<AppExit>) {
+pub fn exit_app(_: On<Pointer<Click>>, mut app_exit: MessageWriter<AppExit>) {
     app_exit.write(AppExit::Success);
 }

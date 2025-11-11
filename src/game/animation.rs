@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor};
-use rand::{prelude::*, rng, thread_rng};
+use rand::{prelude::*, rng};
 use std::time::Duration;
 
 use crate::{
@@ -190,14 +190,14 @@ fn update_animation_timer(time: Res<Time>, mut query: Query<&mut PlayerAnimation
 }
 
 /// Update the texture atlas to reflect changes in the animation.
-fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite)>) {
-    for (animation, mut sprite) in &mut query {
+fn update_animation_atlas(mut query: Query<(&PlayerAnimation, &mut Sprite, &mut Anchor)>) {
+    for (animation, mut sprite, mut anchor) in &mut query {
         let Some(atlas) = sprite.texture_atlas.as_mut() else {
             continue;
         };
         if animation.changed() {
             atlas.index = animation.get_atlas_index();
-            sprite.anchor = Anchor::Custom(animation.state.get_anchor_point(animation.frame));
+            *anchor = Anchor(animation.state.get_anchor_point(animation.frame));
         }
     }
 }
@@ -369,7 +369,7 @@ impl PlayerAnimation {
     /// Update animation timers.
     pub fn update_timer(&mut self, delta: Duration) {
         self.timer.tick(delta);
-        if !self.timer.finished() {
+        if !self.timer.is_finished() {
             return;
         }
         self.frame = (self.frame + 1)
@@ -510,7 +510,7 @@ impl PlayerAnimation {
         if self.state_changed {
             true
         } else {
-            self.timer.finished()
+            self.timer.is_finished()
         }
     }
 

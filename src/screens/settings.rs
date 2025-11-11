@@ -105,22 +105,22 @@ const MAX_VOLUME: f32 = 3.0;
 const MAX_GAME_SPEED: f32 = 3.0;
 const MIN_GAME_SPEED: f32 = 0.2;
 
-fn lower_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
+fn lower_volume(_: On<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
     let new_factor = global_volume.volume.to_linear() - 0.1;
     global_volume.volume = Volume::Linear(new_factor.max(MIN_VOLUME));
 }
 
-fn raise_volume(_: Trigger<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
+fn raise_volume(_: On<Pointer<Click>>, mut global_volume: ResMut<GlobalVolume>) {
     let new_factor = global_volume.volume.to_linear() + 0.1;
     global_volume.volume = Volume::Linear(new_factor.min(MAX_VOLUME));
 }
 
-fn lower_game_speed(_: Trigger<Pointer<Click>>, mut time: ResMut<Time<Virtual>>) {
+fn lower_game_speed(_: On<Pointer<Click>>, mut time: ResMut<Time<Virtual>>) {
     let new_speed = time.relative_speed() - 0.1;
     time.set_relative_speed(new_speed.max(MIN_GAME_SPEED));
 }
 
-fn raise_game_speed(_: Trigger<Pointer<Click>>, mut time: ResMut<Time<Virtual>>) {
+fn raise_game_speed(_: On<Pointer<Click>>, mut time: ResMut<Time<Virtual>>) {
     let new_speed = time.relative_speed() + 0.1;
     time.set_relative_speed(new_speed.min(MAX_GAME_SPEED));
 }
@@ -152,7 +152,7 @@ fn update_game_speed_label(
 }
 
 fn enter_last_screen(
-    _: Trigger<Pointer<Click>>,
+    _: On<Pointer<Click>>,
     mut next_screen: ResMut<NextState<GameState>>,
     mut previous_state: ResMut<PreviousState>,
 ) {

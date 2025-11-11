@@ -47,7 +47,7 @@ impl Plugin for TiledPlugin {
                 (
                     process_loaded_maps,
                     (handle_mouse_highlight, apply_highlight_effect)
-                        .run_if(on_event::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
+                        .run_if(on_message::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
                 )
                     .chain()
                     .in_set(AppSystems::PreUpdate),
@@ -220,7 +220,7 @@ impl AssetLoader for TiledLoader {
 
 pub fn process_loaded_maps(
     mut commands: Commands,
-    mut map_events: EventReader<AssetEvent<TiledMap>>,
+    mut map_events: MessageReader<AssetEvent<TiledMap>>,
     maps: Res<Assets<TiledMap>>,
     tile_storage_query: Query<(Entity, &TileStorage)>,
     mut map_query: Query<(
@@ -485,7 +485,7 @@ fn apply_highlight_effect(
 fn handle_mouse_highlight(
     mut commands: Commands,
     cursor_pos: Res<CursorPos>,
-    mut mouse_button_input_events: EventReader<MouseButtonInput>,
+    mut mouse_button_input_events: MessageReader<MouseButtonInput>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
