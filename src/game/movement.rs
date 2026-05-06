@@ -14,6 +14,7 @@
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
 use bevy::{camera::primitives::Aabb, prelude::*};
+use bevy::{camera::primitives::Aabb, prelude::*};
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
@@ -91,9 +92,11 @@ fn apply_movement(
                 map_type,
                 anchor,
             ) && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
-                && obstacle_q.get(tile_entity).is_ok()
             {
-                return;
+                if obstacle_q.get(tile_entity).is_ok() {
+                    println!("Collision detected at tile position: {:?}", future_tile_pos);
+                }
+                //return;
             }
         }
         if controller.intent.length_squared() > 0.0 {

@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use bevy::{
-    ecs::{spawn::SpawnWith, system::IntoObserverSystem},
+    ecs::{event::EntityEvent, spawn::SpawnWith, system::IntoObserverSystem},
     prelude::*,
     ui::Val::*,
 };

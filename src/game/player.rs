@@ -3,6 +3,7 @@
 use bevy::{
     image::{ImageLoaderSettings, ImageSampler},
     prelude::*,
+    sprite::Anchor,
 };
 
 use crate::{
@@ -59,6 +60,7 @@ pub fn player(
             }),
             ..default()
         },
+        Anchor::CENTER,
         Transform::from_translation(Vec2::splat(0.0).extend(PLAYER_Z))
             .with_scale(Vec2::splat(PLAYER_SCALE).extend(1.0)),
         MovementController {
