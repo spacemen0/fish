@@ -14,9 +14,15 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Gameplay), spawn_enemies);
     app.add_systems(
         Update,
-        (tick_enemy_roaming_timers.in_set(AppSystems::TickTimers), apply_roaming)
-            .run_if(in_state(GameState::Gameplay))
-            .in_set(AppSystems::Update),
+        tick_enemy_roaming_timers
+            .in_set(AppSystems::TickTimers)
+            .run_if(in_state(GameState::Gameplay)),
+    );
+    app.add_systems(
+        Update,
+        apply_roaming
+            .in_set(AppSystems::Update)
+            .run_if(in_state(GameState::Gameplay)),
     );
 }
 

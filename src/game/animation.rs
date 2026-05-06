@@ -14,18 +14,21 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<PlayerAnimation>();
     app.add_systems(
         Update,
+        update_animation_timer
+            .in_set(AppSystems::TickTimers)
+            .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay))),
+    );
+    app.add_systems(
+        Update,
         (
-            update_animation_timer.in_set(AppSystems::TickTimers),
-            (
-                update_animation_actions,
-                update_animation_movement,
-                update_animation_atlas,
-                trigger_step_sound_effect,
-            )
-                .chain()
-                .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay)))
-                .in_set(AppSystems::Update),
-        ),
+            update_animation_actions,
+            update_animation_movement,
+            update_animation_atlas,
+            trigger_step_sound_effect,
+        )
+            .chain()
+            .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay)))
+            .in_set(AppSystems::Update),
     );
 }
 
