@@ -14,7 +14,6 @@ use crate::states::GameState;
 
 pub(super) fn plugin(app: &mut App) {
     app.init_state::<GameState>();
-    app.enable_state_scoped_entities::<GameState>();
 
     app.add_plugins((
         credits::plugin,

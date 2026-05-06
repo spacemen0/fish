@@ -13,7 +13,7 @@
 //! purposes. If you want to move the player in a smoother way,
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
-use bevy::{prelude::*, render::primitives::Aabb};
+use bevy::{camera::primitives::Aabb, prelude::*};
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
@@ -80,7 +80,7 @@ fn apply_movement(
         {
             let future_in_map_pos: Vec2 = {
                 let cursor_pos = Vec4::from((future_position, 1.0));
-                let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
+                let cursor_in_map_pos = map_transform.to_matrix().inverse() * cursor_pos;
                 cursor_in_map_pos.xy()
             };
             if let Some(future_tile_pos) = TilePos::from_world_pos(

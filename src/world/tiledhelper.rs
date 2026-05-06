@@ -47,7 +47,7 @@ impl Plugin for TiledPlugin {
                 (
                     process_loaded_maps,
                     (handle_mouse_highlight, apply_highlight_effect)
-                        .run_if(on_event::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
+                        .run_if(on_message::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
                 )
                     .chain()
                     .in_set(AppSystems::PreUpdate),
@@ -120,6 +120,7 @@ impl tiled::ResourceReader for BytesResourceReader {
     }
 }
 
+#[derive(TypePath)]
 pub struct TiledLoader;
 
 #[derive(Debug, Error)]
@@ -148,7 +149,7 @@ impl AssetLoader for TiledLoader {
             BytesResourceReader::new(&bytes),
         );
         let map = loader
-            .load_tmx_map(load_context.path())
+            .load_tmx_map(load_context.path().path())
             .map_err(|e| std::io::Error::other(format!("Could not load TMX map: {e}")))?;
 
         let mut tilemap_textures = HashMap::default();
@@ -165,6 +166,7 @@ impl AssetLoader for TiledLoader {
                                 // The load context path is the TMX file itself. If the file is at the root of the
                                 // assets/ directory structure then the tmx_dir will be empty, which is fine.
                                 let tmx_dir = load_context
+                                    .path()
                                     .path()
                                     .parent()
                                     .expect("The asset load context was empty.");
@@ -208,7 +210,7 @@ impl AssetLoader for TiledLoader {
             tile_image_offsets,
         };
 
-        info!("Loaded map: {}", load_context.path().display());
+        info!("Loaded map: {}", load_context.path().path().display());
         Ok(asset_map)
     }
 
@@ -220,7 +222,7 @@ impl AssetLoader for TiledLoader {
 
 pub fn process_loaded_maps(
     mut commands: Commands,
-    mut map_events: EventReader<AssetEvent<TiledMap>>,
+    mut map_events: MessageReader<AssetEvent<TiledMap>>,
     maps: Res<Assets<TiledMap>>,
     tile_storage_query: Query<(Entity, &TileStorage)>,
     mut map_query: Query<(
@@ -237,7 +239,7 @@ pub fn process_loaded_maps(
                 info!("Map added!");
                 changed_maps.push(*id);
             }
-            AssetEvent::Modified { id } => {
+            AssetEvent::LoadedWithDependencies { id } => {
                 info!("Map changed!");
                 changed_maps.push(*id);
             }
@@ -245,7 +247,7 @@ pub fn process_loaded_maps(
                 info!("Map removed!");
                 // if mesh was modified and removed in the same update, ignore the modification
                 // events are ordered so future modification events are ok
-                changed_maps.retain(|changed_handle| changed_handle == id);
+                changed_maps.retain(|changed_handle| *changed_handle == *id);
             }
             _ => continue,
         }
@@ -485,7 +487,7 @@ fn apply_highlight_effect(
 fn handle_mouse_highlight(
     mut commands: Commands,
     cursor_pos: Res<CursorPos>,
-    mut mouse_button_input_events: EventReader<MouseButtonInput>,
+    mut mouse_button_input_events: MessageReader<MouseButtonInput>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -519,7 +521,7 @@ fn handle_mouse_highlight(
         let cursor_pos: Vec2 = cursor_pos.0;
         let cursor_in_map_pos: Vec2 = {
             let cursor_pos = Vec4::from((cursor_pos, 0.0, 1.0));
-            let cursor_in_map_pos = map_transform.compute_matrix().inverse() * cursor_pos;
+            let cursor_in_map_pos = map_transform.to_matrix().inverse() * cursor_pos;
             cursor_in_map_pos.xy()
         };
         if let Some(tile_pos) = TilePos::from_world_pos(
