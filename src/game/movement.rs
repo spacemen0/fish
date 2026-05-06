@@ -14,7 +14,6 @@
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
 use bevy::{camera::primitives::Aabb, prelude::*};
-use bevy::{camera::primitives::Aabb, prelude::*};
 use bevy_ecs_tilemap::prelude::*;
 
 use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
@@ -70,37 +69,82 @@ fn apply_movement(
     >,
     obstacle_q: Query<&Obstacle>,
 ) {
-    for (controller, mut transform, aabb) in &mut movement_query {
-        let velocity = controller.max_speed * controller.intent;
-        let delta_movement = velocity.extend(0.0) * time.delta_secs();
-        let future_position =
-            transform.translation + delta_movement + Vec3::from(aabb.half_extents);
+    let delta_time = time.delta_secs();
 
-        for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
-            tilemap_q.iter()
-        {
-            let future_in_map_pos: Vec2 = {
-                let cursor_pos = Vec4::from((future_position, 1.0));
-                let cursor_in_map_pos = map_transform.to_matrix().inverse() * cursor_pos;
-                cursor_in_map_pos.xy()
-            };
-            if let Some(future_tile_pos) = TilePos::from_world_pos(
-                &future_in_map_pos,
+    for (controller, mut transform, aabb) in &mut movement_query {
+        if controller.intent == Vec2::ZERO {
+            continue;
+        }
+
+        let velocity = controller.max_speed * controller.intent;
+        let delta_movement = velocity * delta_time;
+
+        // Try moving on X axis
+        let mut new_pos = transform.translation;
+        new_pos.x += delta_movement.x;
+        if !check_collision(new_pos, aabb, &tilemap_q, &obstacle_q) {
+            transform.translation.x = new_pos.x;
+        }
+
+        // Try moving on Y axis
+        let mut new_pos = transform.translation;
+        new_pos.y += delta_movement.y;
+        if !check_collision(new_pos, aabb, &tilemap_q, &obstacle_q) {
+            transform.translation.y = new_pos.y;
+        }
+    }
+}
+
+fn check_collision(
+    pos: Vec3,
+    aabb: &Aabb,
+    tilemap_q: &Query<
+        (
+            &TilemapSize,
+            &TilemapGridSize,
+            &TilemapTileSize,
+            &TilemapType,
+            &TileStorage,
+            &Transform,
+            &TilemapAnchor,
+        ),
+        Without<MovementController>,
+    >,
+    obstacle_q: &Query<&Obstacle>,
+) -> bool {
+    let half_extents = aabb.half_extents.xy();
+    // Check 4 corners of the AABB
+    let corners = [
+        pos.xy() + Vec2::new(half_extents.x, half_extents.y),
+        pos.xy() + Vec2::new(-half_extents.x, half_extents.y),
+        pos.xy() + Vec2::new(half_extents.x, -half_extents.y),
+        pos.xy() + Vec2::new(-half_extents.x, -half_extents.y),
+    ];
+
+    for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
+        tilemap_q.iter()
+    {
+        let map_inv = map_transform.to_matrix().inverse();
+
+        for corner in corners {
+            let corner_in_map_pos = (map_inv * corner.extend(0.0).extend(1.0)).xy();
+
+            if let Some(tile_pos) = TilePos::from_world_pos(
+                &corner_in_map_pos,
                 map_size,
                 grid_size,
                 tile_size,
                 map_type,
                 anchor,
-            ) && let Some(tile_entity) = tile_storage.get(&future_tile_pos)
-            {
-                if obstacle_q.get(tile_entity).is_ok() {
-                    println!("Collision detected at tile position: {:?}", future_tile_pos);
+            ) {
+                if let Some(tile_entity) = tile_storage.get(&tile_pos) {
+                    if obstacle_q.get(tile_entity).is_ok() {
+                        return true;
+                    }
                 }
-                //return;
             }
         }
-        if controller.intent.length_squared() > 0.0 {
-            transform.translation += delta_movement;
-        }
     }
+
+    false
 }

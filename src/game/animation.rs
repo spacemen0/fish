@@ -96,8 +96,9 @@ fn update_animation_actions(
     time: Res<Time>,
     mut player_query: Query<(&mut PlayerAnimation, &mut PlayerActionState)>,
 ) {
-    let (mut animation, mut action_state) =
-        player_query.single_mut().expect("Player should exist!");
+    let Ok((mut animation, mut action_state)) = player_query.single_mut() else {
+        return;
+    };
     let direction = animation.state.get_direction();
 
     if action_state.current_action.is_none() {

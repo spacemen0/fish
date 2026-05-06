@@ -102,12 +102,13 @@ fn record_player_directional_input(
         controller.intent = intent;
     }
 }
-
 fn record_player_actions_input(
     input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<(&mut PlayerActionState, &MovementController)>,
 ) {
-    let (mut action_state, controller) = player_query.single_mut().expect("Player should exist!");
+    let Ok((mut action_state, controller)) = player_query.single_mut() else {
+        return;
+    };
 
     if action_state.current_action.is_none() {
         // Only allow starting actions when not moving

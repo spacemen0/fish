@@ -14,15 +14,25 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Gameplay), spawn_enemies);
     app.add_systems(
         Update,
-        (apply_roaming,)
+        (tick_enemy_roaming_timers.in_set(AppSystems::TickTimers), apply_roaming)
             .run_if(in_state(GameState::Gameplay))
             .in_set(AppSystems::Update),
     );
 }
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[derive(Component, Debug, Clone, Reflect)]
 #[reflect(Component)]
-pub(crate) struct Enemy;
+pub(crate) struct Enemy {
+    pub roaming_timer: Timer,
+}
+
+impl Default for Enemy {
+    fn default() -> Self {
+        Self {
+            roaming_timer: Timer::from_seconds(2.0, TimerMode::Repeating),
+        }
+    }
+}
 
 pub fn enemy(
     player_assets: &EnemyAssets,
@@ -36,7 +46,7 @@ pub fn enemy(
     let texture_atlas_layout = texture_atlas_layouts.add(layout);
 
     (
-        Enemy,
+        Enemy::default(),
         Sprite {
             image: player_assets.enemies.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -52,6 +62,10 @@ pub fn enemy(
             ..default()
         },
         WithinBounds,
+        bevy::camera::primitives::Aabb::from_min_max(
+            Vec3::new(-8.0, -8.0, 0.0),
+            Vec3::new(8.0, 8.0, 0.0),
+        ),
     )
 }
 
@@ -71,21 +85,21 @@ fn spawn_enemies(
     }
 }
 
-fn apply_roaming(
-    time: Res<Time>,
-    mut movement_query: Query<(&mut MovementController, &mut Transform), With<Enemy>>,
-) {
-    for (mut controller, mut transform) in &mut movement_query {
-        // Randomly change direction every 2 seconds.
-        if time.elapsed_secs() % 2.0 < 0.1 {
+fn tick_enemy_roaming_timers(time: Res<Time>, mut enemy_query: Query<&mut Enemy>) {
+    for mut enemy in &mut enemy_query {
+        enemy.roaming_timer.tick(time.delta());
+    }
+}
+
+fn apply_roaming(mut enemy_query: Query<(&Enemy, &mut MovementController)>) {
+    for (enemy, mut controller) in &mut enemy_query {
+        if enemy.roaming_timer.just_finished() {
             controller.intent = Vec2::new(
                 rand::random::<f32>() * 2.0 - 1.0,
                 rand::random::<f32>() * 2.0 - 1.0,
             )
             .normalize_or_zero();
         }
-        let velocity = controller.max_speed * controller.intent;
-        transform.translation += velocity.extend(0.0) * time.delta_secs();
     }
 }
 
