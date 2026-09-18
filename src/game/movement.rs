@@ -13,10 +13,15 @@
 //! purposes. If you want to move the player in a smoother way,
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
-use bevy::{camera::primitives::Aabb, prelude::*};
+use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::{AppSystems, states::GameState, world::tiledhelper::Obstacle};
+use crate::{
+    AppSystems,
+    game::collision::{Collider, check_collision},
+    states::GameState,
+    world::tiledhelper::Obstacle,
+};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
@@ -54,7 +59,8 @@ impl Default for MovementController {
 
 fn apply_movement(
     time: Res<Time>,
-    mut movement_query: Query<(&MovementController, &mut Transform, &Aabb)>,
+    mut movement_query: Query<(Entity, &MovementController, &mut Transform, Option<&Collider>)>,
+    static_colliders: Query<(Entity, &Transform, &Collider), Without<MovementController>>,
     tilemap_q: Query<
         (
             &TilemapSize,
@@ -71,7 +77,15 @@ fn apply_movement(
 ) {
     let delta_time = time.delta_secs();
 
-    for (controller, mut transform, aabb) in &mut movement_query {
+    // Snapshot positions of moving colliders so entities can check against each other without query conflict
+    let mut moving_colliders: Vec<(Entity, Vec2, Collider)> = movement_query
+        .iter()
+        .filter_map(|(entity, _, transform, collider)| {
+            collider.map(|col| (entity, transform.translation.xy(), col.clone()))
+        })
+        .collect();
+
+    for (entity, controller, mut transform, maybe_collider) in &mut movement_query {
         if controller.intent == Vec2::ZERO {
             continue;
         }
@@ -79,72 +93,49 @@ fn apply_movement(
         let velocity = controller.max_speed * controller.intent;
         let delta_movement = velocity * delta_time;
 
-        // Try moving on X axis
-        let mut new_pos = transform.translation;
-        new_pos.x += delta_movement.x;
-        if !check_collision(new_pos, aabb, &tilemap_q, &obstacle_q) {
-            transform.translation.x = new_pos.x;
-        }
+        if let Some(collider) = maybe_collider {
+            let current_pos = transform.translation.xy();
 
-        // Try moving on Y axis
-        let mut new_pos = transform.translation;
-        new_pos.y += delta_movement.y;
-        if !check_collision(new_pos, aabb, &tilemap_q, &obstacle_q) {
-            transform.translation.y = new_pos.y;
-        }
-    }
-}
-
-fn check_collision(
-    pos: Vec3,
-    aabb: &Aabb,
-    tilemap_q: &Query<
-        (
-            &TilemapSize,
-            &TilemapGridSize,
-            &TilemapTileSize,
-            &TilemapType,
-            &TileStorage,
-            &Transform,
-            &TilemapAnchor,
-        ),
-        Without<MovementController>,
-    >,
-    obstacle_q: &Query<&Obstacle>,
-) -> bool {
-    let half_extents = aabb.half_extents.xy();
-    // Check 4 corners of the AABB
-    let corners = [
-        pos.xy() + Vec2::new(half_extents.x, half_extents.y),
-        pos.xy() + Vec2::new(-half_extents.x, half_extents.y),
-        pos.xy() + Vec2::new(half_extents.x, -half_extents.y),
-        pos.xy() + Vec2::new(-half_extents.x, -half_extents.y),
-    ];
-
-    for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
-        tilemap_q.iter()
-    {
-        let map_inv = map_transform.to_matrix().inverse();
-
-        for corner in corners {
-            let corner_in_map_pos = (map_inv * corner.extend(0.0).extend(1.0)).xy();
-
-            if let Some(tile_pos) = TilePos::from_world_pos(
-                &corner_in_map_pos,
-                map_size,
-                grid_size,
-                tile_size,
-                map_type,
-                anchor,
+            // Try moving on X axis
+            let mut new_pos = current_pos;
+            new_pos.x += delta_movement.x;
+            if !check_collision(
+                current_pos,
+                new_pos,
+                collider,
+                entity,
+                &moving_colliders,
+                &tilemap_q,
+                &obstacle_q,
+                &static_colliders,
             ) {
-                if let Some(tile_entity) = tile_storage.get(&tile_pos) {
-                    if obstacle_q.get(tile_entity).is_ok() {
-                        return true;
-                    }
-                }
+                transform.translation.x = new_pos.x;
             }
+
+            // Try moving on Y axis (from the updated intermediate position)
+            let intermediate_pos = transform.translation.xy();
+            let mut final_pos = intermediate_pos;
+            final_pos.y += delta_movement.y;
+            if !check_collision(
+                intermediate_pos,
+                final_pos,
+                collider,
+                entity,
+                &moving_colliders,
+                &tilemap_q,
+                &obstacle_q,
+                &static_colliders,
+            ) {
+                transform.translation.y = final_pos.y;
+            }
+
+            // Update snapshot position for this entity so subsequent entities see the new position
+            if let Some(entry) = moving_colliders.iter_mut().find(|(e, _, _)| *e == entity) {
+                entry.1 = transform.translation.xy();
+            }
+        } else {
+            transform.translation.x += delta_movement.x;
+            transform.translation.y += delta_movement.y;
         }
     }
-
-    false
 }

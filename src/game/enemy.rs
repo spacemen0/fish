@@ -3,7 +3,7 @@ use crate::constants::*;
 use crate::states::VisibleInState;
 use crate::{
     AppSystems,
-    game::{camera::WithinBounds, movement::MovementController},
+    game::{camera::WithinBounds, collision::Collider, movement::MovementController},
     states::GameState,
 };
 use bevy::image::{ImageLoaderSettings, ImageSampler};
@@ -68,10 +68,7 @@ pub fn enemy(
             ..default()
         },
         WithinBounds,
-        bevy::camera::primitives::Aabb::from_min_max(
-            Vec3::new(-8.0, -8.0, 0.0),
-            Vec3::new(8.0, 8.0, 0.0),
-        ),
+        Collider::new(Vec2::new(16.0, 16.0)),
     )
 }
 

@@ -10,7 +10,11 @@ use crate::{
     AppSystems,
     asset_tracking::LoadResource,
     constants::{GRID_SIZE_X, GRID_SIZE_Y},
-    game::{animation::PlayerAnimation, movement::MovementController},
+    game::{
+        animation::PlayerAnimation,
+        collision::Collider,
+        movement::MovementController,
+    },
     states::GameState,
 };
 
@@ -68,6 +72,7 @@ pub fn player(
             ..default()
         },
         WithinBounds,
+        Collider::new(Vec2::new(16.0, 16.0)),
         player_animation,
         PlayerActionState::default(),
     )
