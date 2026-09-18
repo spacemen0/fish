@@ -12,23 +12,29 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(GameState::Pausing), spawn_pausing_screen);
 }
 fn spawn_pausing_screen(mut commands: Commands) {
-    commands.spawn((
-        widget::ui_root("Pausing Screen"),
-        DespawnOnExit(GameState::Pausing),
-        #[cfg(not(target_family = "wasm"))]
-        children![
-            widget::button("Continue", continue_to_gameplay_screen),
-            widget::button("Settings", enter_settings_screen),
-            widget::button("Title", enter_title_screen),
-            widget::button("Exit", exit_app),
-        ],
-        #[cfg(target_family = "wasm")]
-        children![
-            widget::button("Continue", continue_to_gameplay_screen),
-            widget::button("Settings", enter_settings_screen),
-            widget::button("Title", enter_title_screen),
-        ],
-    ));
+    #[cfg(not(target_family = "wasm"))]
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Pausing Screen")
+            Children [
+                widget::button("Continue", continue_to_gameplay_screen),
+                widget::button("Settings", enter_settings_screen),
+                widget::button("Title", enter_title_screen),
+                widget::button("Exit", exit_app),
+            ]
+        })
+        .insert(DespawnOnExit(GameState::Pausing));
+    #[cfg(target_family = "wasm")]
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Pausing Screen")
+            Children [
+                widget::button("Continue", continue_to_gameplay_screen),
+                widget::button("Settings", enter_settings_screen),
+                widget::button("Title", enter_title_screen),
+            ]
+        })
+        .insert(DespawnOnExit(GameState::Pausing));
 }
 
 fn continue_to_gameplay_screen(

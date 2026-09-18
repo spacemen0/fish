@@ -13,23 +13,29 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 fn spawn_title_screen(mut commands: Commands) {
-    commands.spawn((
-        widget::ui_root("Title Screen"),
-        DespawnOnExit(GameState::Title),
-        #[cfg(not(target_family = "wasm"))]
-        children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", enter_settings_screen),
-            widget::button("Credits", enter_credits_screen),
-            widget::button("Exit", exit_app),
-        ],
-        #[cfg(target_family = "wasm")]
-        children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", enter_settings_screen),
-            widget::button("Credits", enter_credits_screen),
-        ],
-    ));
+    #[cfg(not(target_family = "wasm"))]
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Title Screen")
+            Children [
+                widget::button("Play", enter_loading_or_gameplay_screen),
+                widget::button("Settings", enter_settings_screen),
+                widget::button("Credits", enter_credits_screen),
+                widget::button("Exit", exit_app),
+            ]
+        })
+        .insert(DespawnOnExit(GameState::Title));
+    #[cfg(target_family = "wasm")]
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Title Screen")
+            Children [
+                widget::button("Play", enter_loading_or_gameplay_screen),
+                widget::button("Settings", enter_settings_screen),
+                widget::button("Credits", enter_credits_screen),
+            ]
+        })
+        .insert(DespawnOnExit(GameState::Title));
 }
 
 fn enter_loading_or_gameplay_screen(

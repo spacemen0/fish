@@ -19,11 +19,12 @@ pub(super) fn plugin(app: &mut App) {
 }
 
 fn spawn_loading_screen(mut commands: Commands) {
-    commands.spawn((
-        widget::ui_root("Loading Screen"),
-        DespawnOnExit(GameState::Loading),
-        children![widget::label("Loading...")],
-    ));
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Loading Screen")
+            Children [widget::label("Loading...")]
+        })
+        .insert(DespawnOnExit(GameState::Loading));
 }
 
 fn enter_gameplay_screen(

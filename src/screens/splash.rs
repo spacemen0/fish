@@ -49,37 +49,41 @@ const SPLASH_DURATION_SECS: f32 = 1.0;
 const SPLASH_FADE_DURATION_SECS: f32 = 0.3;
 
 fn spawn_splash_screen(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        widget::ui_root("Splash Screen"),
-        BackgroundColor(SPLASH_BACKGROUND_COLOR),
-        DespawnOnExit(GameState::Splash),
-        children![(
-            Name::new("Splash image"),
-            Node {
-                margin: UiRect::all(Val::Auto),
-                width: Val::Percent(70.0),
-                ..default()
-            },
-            ImageNode::new(
-                asset_server
-                    .load_builder()
-                    .with_settings(|settings: &mut ImageLoaderSettings| {
-                        // Make an exception for the splash image in case
-                        // `ImagePlugin::default_nearest()` is used for pixel art.
-                        settings.sampler = ImageSampler::linear();
-                    })
-                    .load("images/splash.png"),
-            ),
-            ImageNodeFadeInOut {
-                total_duration: SPLASH_DURATION_SECS,
-                fade_duration: SPLASH_FADE_DURATION_SECS,
-                t: 0.0,
-            },
-        )],
-    ));
+    let image_handle = asset_server
+        .load_builder()
+        .with_settings(|settings: &mut ImageLoaderSettings| {
+            // Make an exception for the splash image in case
+            // `ImagePlugin::default_nearest()` is used for pixel art.
+            settings.sampler = ImageSampler::linear();
+        })
+        .load("images/splash.png");
+
+    commands
+        .spawn_scene(bsn! {
+            widget::ui_root("Splash Screen")
+            BackgroundColor(SPLASH_BACKGROUND_COLOR)
+            Children [
+                (
+                    Name("Splash image")
+                    Node {
+                        margin: { UiRect::all(Val::Auto) },
+                        width: percent(70.0),
+                    }
+                    ImageNode {
+                        image: image_handle,
+                    }
+                    ImageNodeFadeInOut {
+                        total_duration: SPLASH_DURATION_SECS,
+                        fade_duration: SPLASH_FADE_DURATION_SECS,
+                        t: 0.0,
+                    }
+                )
+            ]
+        })
+        .insert(DespawnOnExit(GameState::Splash));
 }
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Clone, Copy, Default)]
 #[reflect(Component)]
 struct ImageNodeFadeInOut {
     /// Total duration in seconds.
