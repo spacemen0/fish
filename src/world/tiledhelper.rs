@@ -47,7 +47,7 @@ impl Plugin for TiledPlugin {
                 (
                     process_loaded_maps,
                     (handle_mouse_highlight, apply_highlight_effect)
-                        .run_if(on_message::<MouseButtonInput>.and(in_state(GameState::Gameplay))),
+                        .run_if(on_message::<MouseButtonInput>.and_then(in_state(GameState::Gameplay))),
                 )
                     .chain()
                     .in_set(AppSystems::PreUpdate),
@@ -539,10 +539,7 @@ fn handle_mouse_highlight(
                 .insert((
                     Text2d::new(format!("({},{})", tile_pos.x, tile_pos.y)),
                     TextColor::WHITE,
-                    TextFont {
-                        font_size: 10.0,
-                        ..default()
-                    },
+                    TextFont::from_font_size(10.0),
                     Transform::from_translation(Vec3::new(cursor_pos.x, cursor_pos.y, 0.1)),
                     VisibleInState(vec![GameState::Gameplay]),
                 ));

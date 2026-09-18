@@ -26,8 +26,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         pause_or_continue_gameplay.run_if(
-            (in_state(GameState::Gameplay).or(in_state(GameState::Pausing)))
-                .and(input_just_pressed(KeyCode::Escape)),
+            (in_state(GameState::Gameplay).or_else(in_state(GameState::Pausing)))
+                .and_then(input_just_pressed(KeyCode::Escape)),
         ),
     );
 }

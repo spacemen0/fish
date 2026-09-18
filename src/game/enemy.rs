@@ -120,12 +120,12 @@ impl FromWorld for EnemyAssets {
     fn from_world(world: &mut World) -> Self {
         let assets = world.resource::<AssetServer>();
         Self {
-            enemies: assets.load_with_settings(
-                "images/enemies.png",
-                |settings: &mut ImageLoaderSettings| {
+            enemies: assets
+                .load_builder()
+                .with_settings(|settings: &mut ImageLoaderSettings| {
                     settings.sampler = ImageSampler::nearest();
-                },
-            ),
+                })
+                .load("images/enemies.png"),
         }
     }
 }

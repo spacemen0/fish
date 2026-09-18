@@ -14,7 +14,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        enter_gameplay_screen.run_if(in_state(GameState::Loading).and(all_assets_loaded)),
+        enter_gameplay_screen.run_if(in_state(GameState::Loading).and_then(all_assets_loaded)),
     );
 }
 

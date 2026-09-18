@@ -16,7 +16,7 @@ pub(super) fn plugin(app: &mut App) {
         Update,
         update_animation_timer
             .in_set(AppSystems::TickTimers)
-            .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay))),
+            .run_if(resource_exists::<PlayerAssets>.and_then(in_state(GameState::Gameplay))),
     );
     app.add_systems(
         Update,
@@ -27,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
             trigger_step_sound_effect,
         )
             .chain()
-            .run_if(resource_exists::<PlayerAssets>.and(in_state(GameState::Gameplay)))
+            .run_if(resource_exists::<PlayerAssets>.and_then(in_state(GameState::Gameplay)))
             .in_set(AppSystems::Update),
     );
 }

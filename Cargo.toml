@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18.1", features = [
+bevy = { version = "0.19.1", features = [
     "2d",
     "ui",
     "wayland",
@@ -24,9 +24,9 @@ tracing = { version = "0.1.41", features = [
     "release_max_level_warn",
 ] }
 fastrand = "2.3.0"
-bevy_egui = "0.39.1"
-bevy-inspector-egui = "0.36.0"
-bevy_ecs_tilemap = "0.18.1"
+bevy_egui = "0.40.1"
+bevy-inspector-egui = "0.37.0"
+bevy_ecs_tilemap = "0.19.0"
 thiserror = "2.0.12"
 tiled = "0.14.0"
 

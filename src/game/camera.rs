@@ -23,7 +23,7 @@ pub(super) fn plugin(app: &mut App) {
             apply_screen_wrap,
             camera_follow_player,
             calculate_camera_bounds
-                .run_if(on_message::<WindowResized>.or(on_message::<CameraScaleEvent>)),
+                .run_if(on_message::<WindowResized>.or_else(on_message::<CameraScaleEvent>)),
         )
             .in_set(AppSystems::PostUpdate)
             .run_if(in_state(GameState::Gameplay)),
